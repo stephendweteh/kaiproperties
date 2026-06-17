@@ -144,7 +144,7 @@ class NotificationService
 
             $response = Http::timeout(12)
                 ->acceptJson()
-                ->withToken($apiKey)
+                ->withHeaders(['api-key' => $apiKey])
                 ->post('https://sms.arkesel.com/api/v2/sms/send', [
                     'sender' => $senderId,
                     'message' => $message,

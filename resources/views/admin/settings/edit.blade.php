@@ -77,19 +77,6 @@
             </div>
         </div>
 
-        <div style="margin-bottom: 1rem; padding: 0.8rem; border: 1px dashed var(--border); border-radius: 10px;">
-            <h4 style="margin: 0 0 0.6rem;">Validate SMTP Credentials</h4>
-            <p class="muted" style="margin: 0 0 0.6rem;">Save settings first, then send a test email.</p>
-            <form method="POST" action="{{ route('admin.settings.test-smtp') }}" style="display:flex; gap:0.6rem; flex-wrap: wrap; align-items: end;">
-                @csrf
-                <div style="min-width: 260px; flex:1;">
-                    <label for="test_email">Test Recipient Email</label>
-                    <input id="test_email" type="email" name="test_email" value="{{ old('test_email', auth()->user()?->email) }}" placeholder="you@example.com" required>
-                </div>
-                <button type="submit">Test SMTP</button>
-            </form>
-        </div>
-
         <hr style="margin: 1rem 0; border: 0; border-top: 1px solid var(--border);">
 
         <h3 style="margin-top: 0;">Arkesel SMS API Settings</h3>
@@ -106,7 +93,24 @@
             </div>
         </div>
 
+        <button type="submit">Save Settings</button>
+    </form>
+
+    <div class="card" style="margin-top: 1rem;">
         <div style="margin-bottom: 1rem; padding: 0.8rem; border: 1px dashed var(--border); border-radius: 10px;">
+            <h4 style="margin: 0 0 0.6rem;">Validate SMTP Credentials</h4>
+            <p class="muted" style="margin: 0 0 0.6rem;">Save settings first, then send a test email.</p>
+            <form method="POST" action="{{ route('admin.settings.test-smtp') }}" style="display:flex; gap:0.6rem; flex-wrap: wrap; align-items: end;">
+                @csrf
+                <div style="min-width: 260px; flex:1;">
+                    <label for="test_email">Test Recipient Email</label>
+                    <input id="test_email" type="email" name="test_email" value="{{ old('test_email', auth()->user()?->email) }}" placeholder="you@example.com" required>
+                </div>
+                <button type="submit">Test SMTP</button>
+            </form>
+        </div>
+
+        <div style="padding: 0.8rem; border: 1px dashed var(--border); border-radius: 10px;">
             <h4 style="margin: 0 0 0.6rem;">Validate SMS Credentials</h4>
             <p class="muted" style="margin: 0 0 0.6rem;">Save settings first, then send a test SMS.</p>
             <form method="POST" action="{{ route('admin.settings.test-sms') }}" style="display:flex; gap:0.6rem; flex-wrap: wrap; align-items: end;">
@@ -118,9 +122,7 @@
                 <button type="submit">Test SMS</button>
             </form>
         </div>
-
-        <button type="submit">Save Settings</button>
-    </form>
+    </div>
 
     <form method="POST" action="{{ route('admin.settings.reset-data') }}" class="card" style="margin-top: 1rem; border-color: #f2c4c4;">
         @csrf
