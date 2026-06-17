@@ -45,6 +45,41 @@ class AdminSettingsTest extends TestCase
         Storage::disk('public')->assertExists($logoPath);
     }
 
+    public function test_admin_can_update_smtp_and_arkesel_notification_settings(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin User',
+            'email' => 'admin.notifications@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_ADMIN,
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.settings.update'), [
+                'site_name' => 'Kai Properties',
+                'smtp_host' => 'smtp.mailtrap.io',
+                'smtp_port' => 2525,
+                'smtp_username' => 'mail_user',
+                'smtp_password' => 'mail_secret',
+                'smtp_encryption' => 'tls',
+                'smtp_from_email' => 'notify@kai.local',
+                'smtp_from_name' => 'Kai Notify',
+                'arkesel_api_key' => 'ark_test_key_123',
+                'arkesel_sender_id' => 'KAI_PROP',
+            ])
+            ->assertRedirect(route('admin.settings.edit'));
+
+        $this->assertSame('smtp.mailtrap.io', Setting::valueFor('smtp_host'));
+        $this->assertSame('2525', Setting::valueFor('smtp_port'));
+        $this->assertSame('mail_user', Setting::valueFor('smtp_username'));
+        $this->assertSame('mail_secret', Setting::valueFor('smtp_password'));
+        $this->assertSame('tls', Setting::valueFor('smtp_encryption'));
+        $this->assertSame('notify@kai.local', Setting::valueFor('smtp_from_email'));
+        $this->assertSame('Kai Notify', Setting::valueFor('smtp_from_name'));
+        $this->assertSame('ark_test_key_123', Setting::valueFor('arkesel_api_key'));
+        $this->assertSame('KAI_PROP', Setting::valueFor('arkesel_sender_id'));
+    }
+
     public function test_admin_can_reset_operational_data_and_keep_categories(): void
     {
         Storage::fake('public');

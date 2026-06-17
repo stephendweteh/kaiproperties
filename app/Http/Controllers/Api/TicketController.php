@@ -13,11 +13,16 @@ use App\Http\Resources\TicketResource;
 use App\Models\CostRequest;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class TicketController extends Controller
 {
+    public function __construct(private readonly NotificationService $notificationService)
+    {
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -109,6 +114,8 @@ class TicketController extends Controller
             'status' => 'assigned',
         ]);
 
+        $this->notificationService->sendTicketAssigned($ticket->fresh());
+
         return response()->json([
             'message' => 'Ticket assigned successfully.',
             'data' => TicketResource::make($ticket->fresh()->load(['property', 'category', 'reporter', 'technician'])),
@@ -118,6 +125,7 @@ class TicketController extends Controller
     public function changeStatus(TicketStatusRequest $request, Ticket $ticket)
     {
         $user = $request->user();
+        $previousStatus = $ticket->status;
 
         if ($user->hasRole(User::ROLE_TECHNICIAN) && (int) $ticket->assigned_to !== (int) $user->id) {
             return response()->json(['message' => 'You can only update your assigned tickets.'], 403);
@@ -148,6 +156,10 @@ class TicketController extends Controller
         }
 
         $ticket->update($attributes);
+
+        if ($previousStatus !== $ticket->status) {
+            $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
+        }
 
         return response()->json([
             'message' => 'Ticket status updated.',
@@ -204,6 +216,8 @@ class TicketController extends Controller
         $nextTicketStatus = $validated['status'] === 'approved' ? 'in_progress' : 'on_hold';
 
         $costRequest->ticket()->update(['status' => $nextTicketStatus]);
+
+        $this->notificationService->sendCostRequestReviewed($costRequest->fresh());
 
         return response()->json([
             'message' => 'Cost request reviewed successfully.',

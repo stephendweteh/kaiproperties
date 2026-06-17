@@ -8,6 +8,7 @@ use App\Models\Property;
 use App\Models\Ticket;
 use App\Models\TicketAttachment;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
@@ -15,6 +16,10 @@ use Illuminate\Support\Facades\Storage;
 
 class TicketController extends Controller
 {
+    public function __construct(private readonly NotificationService $notificationService)
+    {
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -121,6 +126,10 @@ class TicketController extends Controller
 
         $this->storeAttachments($request, $ticket);
 
+        if (! empty($ticket->assigned_to)) {
+            $this->notificationService->sendTicketAssigned($ticket->fresh());
+        }
+
         return redirect()
             ->route('tickets.index')
             ->with('success', 'Ticket created successfully.');
@@ -154,6 +163,8 @@ class TicketController extends Controller
         $user = $request->user();
         $canManageTickets = $this->canManageTickets($user);
         $technicianMode = false;
+        $previousStatus = $ticket->status;
+        $previousAssignedTo = (int) ($ticket->assigned_to ?? 0);
 
         if (! $canManageTickets) {
             abort_unless($this->canTechnicianWorkOnTicket($user, $ticket), 403);
@@ -206,6 +217,16 @@ class TicketController extends Controller
 
         $this->removeSelectedAttachments($request, $ticket);
         $this->storeAttachments($request, $ticket);
+
+        $ticket->refresh();
+
+        if ((int) ($ticket->assigned_to ?? 0) !== $previousAssignedTo && ! empty($ticket->assigned_to)) {
+            $this->notificationService->sendTicketAssigned($ticket);
+        }
+
+        if ($previousStatus !== $ticket->status) {
+            $this->notificationService->sendTicketStatusChanged($ticket, $previousStatus);
+        }
 
         return redirect()
             ->route('tickets.index')
