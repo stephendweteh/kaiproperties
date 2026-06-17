@@ -143,7 +143,11 @@
                                 </form>
                             </div>
                         @elseif($isTechnician ?? false)
-                            <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">Update Status</a>
+                            @if(in_array($ticket->status, ['logged', 'assigned', 'in_progress'], true))
+                                <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">Update Status</a>
+                            @else
+                                <button type="button" class="btn btn-alt" disabled title="Status update disabled while ticket is on hold.">Update Status</button>
+                            @endif
                         @elseif($approverMode ?? false)
                             <a class="btn btn-alt" href="{{ route('tickets.show', $ticket) }}">View</a>
                         @elseif($canApproveTickets)

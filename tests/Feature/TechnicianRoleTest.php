@@ -286,4 +286,69 @@ class TechnicianRoleTest extends TestCase
         $this->assertSame('in_progress', $ticket->status);
         $this->assertNotNull($ticket->started_at);
     }
+
+    public function test_technician_update_status_button_disabled_on_hold_and_active_on_logged(): void
+    {
+        $technician = User::create([
+            'name' => 'Tech One',
+            'email' => 'tech.button.state@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_TECHNICIAN,
+        ]);
+
+        $approver = User::create([
+            'name' => 'Approver User',
+            'email' => 'approver.button.state@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_APPROVER,
+        ]);
+
+        $property = Property::create([
+            'name' => 'Kai Buttons',
+            'code' => 'KAI-BTN',
+            'city' => 'Accra',
+            'state' => 'Greater Accra',
+            'address' => 'Button Road',
+            'is_active' => true,
+        ]);
+
+        $category = MaintenanceCategory::create([
+            'name' => 'General',
+            'description' => 'General issues',
+            'is_active' => true,
+        ]);
+
+        $holdTicket = Ticket::create([
+            'title' => 'Hold ticket',
+            'description' => 'Should be disabled',
+            'property_id' => $property->id,
+            'maintenance_category_id' => $category->id,
+            'reported_by' => $approver->id,
+            'assigned_to' => $technician->id,
+            'status' => 'on_hold',
+            'priority' => 'medium',
+            'requires_additional_cost' => false,
+        ]);
+
+        $loggedTicket = Ticket::create([
+            'title' => 'Logged ticket',
+            'description' => 'Should be active',
+            'property_id' => $property->id,
+            'maintenance_category_id' => $category->id,
+            'reported_by' => $approver->id,
+            'assigned_to' => $technician->id,
+            'status' => 'logged',
+            'priority' => 'medium',
+            'requires_additional_cost' => false,
+        ]);
+
+        $response = $this->actingAs($technician)->get(route('tickets.index'));
+        $response->assertOk();
+        $response->assertSee('title="Status update disabled while ticket is on hold."', false);
+        $response->assertSee(route('tickets.edit', $loggedTicket), false);
+
+        $this->actingAs($technician)
+            ->get(route('tickets.edit', $holdTicket))
+            ->assertForbidden();
+    }
 }

@@ -113,7 +113,7 @@ class TicketController extends Controller
             'ticket' => $ticket,
             'canEditTickets' => $this->canEditTickets($user),
             'canApproveTickets' => $this->canApproveTickets($user),
-            'canTechnicianUpdate' => $this->canTechnicianWorkOnTicket($user, $ticket),
+            'canTechnicianUpdate' => $this->canTechnicianUpdateStatus($user, $ticket),
         ]);
     }
 
@@ -164,7 +164,7 @@ class TicketController extends Controller
     public function edit(Ticket $ticket)
     {
         $user = request()->user();
-        $technicianMode = $this->canTechnicianWorkOnTicket($user, $ticket);
+        $technicianMode = $this->canTechnicianUpdateStatus($user, $ticket);
 
         abort_unless($this->canEditTickets($user) || $this->canApproveTickets($user) || $technicianMode, 403);
 
@@ -189,7 +189,7 @@ class TicketController extends Controller
         $user = $request->user();
         $canEditTickets = $this->canEditTickets($user);
         $canApproveTickets = $this->canApproveTickets($user);
-        $canTechnicianUpdate = $this->canTechnicianWorkOnTicket($user, $ticket);
+        $canTechnicianUpdate = $this->canTechnicianUpdateStatus($user, $ticket);
         $previousStatus = $ticket->status;
         $previousAssignedTo = (int) ($ticket->assigned_to ?? 0);
 
@@ -511,6 +511,15 @@ class TicketController extends Controller
             $user?->hasRole(User::ROLE_TECHNICIAN)
             && (int) $ticket->assigned_to === (int) $user->id
             && in_array($ticket->status, $this->technicianVisibleStatuses(), true)
+        );
+    }
+
+    private function canTechnicianUpdateStatus(?User $user, Ticket $ticket): bool
+    {
+        return (bool) (
+            $user?->hasRole(User::ROLE_TECHNICIAN)
+            && (int) $ticket->assigned_to === (int) $user->id
+            && in_array($ticket->status, ['logged', 'assigned', 'in_progress'], true)
         );
     }
 
