@@ -141,6 +141,7 @@ curl --request POST \
 		"maintenance_category_id": 2,
 		"unit": "B-203",
 		"priority": "high",
+		"estimated_cost": 250.00,
 		"etd": "2026-06-20 12:30:00"
 	}'
 ```

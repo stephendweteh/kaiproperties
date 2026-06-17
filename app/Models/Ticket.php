@@ -35,6 +35,7 @@ class Ticket extends Model
         'status',
         'priority',
         'etd',
+        'estimated_cost',
         'started_at',
         'completed_at',
         'closed_at',
@@ -43,6 +44,7 @@ class Ticket extends Model
 
     protected $casts = [
         'etd' => 'datetime',
+        'estimated_cost' => 'decimal:2',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
         'closed_at' => 'datetime',

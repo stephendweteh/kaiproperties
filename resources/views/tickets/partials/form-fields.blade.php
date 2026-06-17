@@ -97,6 +97,11 @@
         <label for="etd">Expected Completion Date & Time</label>
         <input id="etd" type="datetime-local" name="etd" value="{{ old('etd', isset($ticket->etd) ? $ticket->etd->format('Y-m-d\TH:i') : '') }}">
     </div>
+
+    <div>
+        <label for="estimated_cost">Estimated Cost</label>
+        <input id="estimated_cost" type="number" name="estimated_cost" min="0" step="0.01" value="{{ old('estimated_cost', $ticket->estimated_cost ?? '') }}" placeholder="0.00">
+    </div>
 </div>
 
 <div style="margin-bottom: 1rem;">

@@ -42,16 +42,22 @@
                         <span>Tickets</span>
                     </span>
                 </a>
-                <a class="{{ request()->routeIs('tickets.create') ? 'active' : '' }}" href="{{ route('tickets.create') }}">
-                    <span class="nav-link-inner">
-                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path d="M12 5v14"></path>
-                            <path d="M5 12h14"></path>
-                            <circle cx="12" cy="12" r="9"></circle>
-                        </svg>
-                        <span>Log Ticket</span>
-                    </span>
-                </a>
+                @if(auth()->user()->hasRole([
+                    \App\Models\User::ROLE_ADMIN,
+                    \App\Models\User::ROLE_OPERATIONS_MANAGER,
+                    \App\Models\User::ROLE_TENANT,
+                ]))
+                    <a class="{{ request()->routeIs('tickets.create') ? 'active' : '' }}" href="{{ route('tickets.create') }}">
+                        <span class="nav-link-inner">
+                            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M12 5v14"></path>
+                                <path d="M5 12h14"></path>
+                                <circle cx="12" cy="12" r="9"></circle>
+                            </svg>
+                            <span>Log Ticket</span>
+                        </span>
+                    </a>
+                @endif
 
                 @if(auth()->user()->role === 'admin')
                     <a class="{{ request()->routeIs('admin.properties.*') ? 'active' : '' }}" href="{{ route('admin.properties.index') }}">

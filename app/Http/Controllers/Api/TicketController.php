@@ -50,7 +50,8 @@ class TicketController extends Controller
         }
 
         if ($user->hasRole(User::ROLE_TECHNICIAN)) {
-            $query->where('assigned_to', $user->id);
+            $query->where('assigned_to', $user->id)
+                ->whereIn('status', $this->technicianVisibleStatuses());
         }
 
         $tickets = $query->paginate($request->integer('per_page', 15));
@@ -65,12 +66,12 @@ class TicketController extends Controller
         $ticket = Ticket::create([
             ...$validated,
             'reported_by' => $request->user()->id,
-            'status' => 'logged',
+            'status' => 'pending_approval',
             'priority' => $validated['priority'] ?? 'medium',
         ]);
 
         return response()->json([
-            'message' => 'Ticket logged successfully.',
+            'message' => 'Ticket created and sent for approval.',
             'data' => TicketResource::make($ticket->load(['property', 'category', 'reporter'])),
         ], 201);
     }
@@ -95,8 +96,8 @@ class TicketController extends Controller
     {
         $user = $request->user();
 
-        if (! $user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER])) {
-            return response()->json(['message' => 'You do not have permission to assign tickets.'], 403);
+        if (! $user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER, User::ROLE_APPROVER])) {
+            return response()->json(['message' => 'You do not have permission to approve or assign tickets.'], 403);
         }
 
         $validated = $request->validated();
@@ -109,10 +110,13 @@ class TicketController extends Controller
             return response()->json(['message' => 'Selected user is not a technician.'], 422);
         }
 
-        $ticket->update([
-            'assigned_to' => $validated['assigned_to'],
-            'status' => 'assigned',
-        ]);
+        $attributes = ['assigned_to' => $validated['assigned_to']];
+
+        if (in_array($ticket->status, ['logged', 'pending_approval', 'rejected'], true)) {
+            $attributes['status'] = 'assigned';
+        }
+
+        $ticket->update($attributes);
 
         $this->notificationService->sendTicketAssigned($ticket->fresh());
 
@@ -231,7 +235,11 @@ class TicketController extends Controller
             return;
         }
 
-        if ($user->hasRole(User::ROLE_TECHNICIAN) && (int) $ticket->assigned_to === (int) $user->id) {
+        if (
+            $user->hasRole(User::ROLE_TECHNICIAN)
+            && (int) $ticket->assigned_to === (int) $user->id
+            && in_array($ticket->status, $this->technicianVisibleStatuses(), true)
+        ) {
             return;
         }
 
@@ -240,5 +248,10 @@ class TicketController extends Controller
         }
 
         abort(403, 'You do not have access to this ticket.');
+    }
+
+    private function technicianVisibleStatuses(): array
+    {
+        return ['assigned', 'in_progress', 'on_hold', 'completed', 'closed', 'overdue'];
     }
 }

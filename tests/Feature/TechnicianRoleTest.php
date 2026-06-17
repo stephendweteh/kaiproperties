@@ -225,4 +225,65 @@ class TechnicianRoleTest extends TestCase
             'status' => 'completed',
         ])->assertOk();
     }
+
+    public function test_assigned_technician_can_move_logged_ticket_to_in_progress_via_web(): void
+    {
+        $technician = User::create([
+            'name' => 'Tech One',
+            'email' => 'tech.logged.web@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_TECHNICIAN,
+        ]);
+
+        $approver = User::create([
+            'name' => 'Approver User',
+            'email' => 'approver.logged.web@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_APPROVER,
+        ]);
+
+        $property = Property::create([
+            'name' => 'Kai Flow',
+            'code' => 'KAI-FLOW',
+            'city' => 'Accra',
+            'state' => 'Greater Accra',
+            'address' => 'Flow Avenue',
+            'is_active' => true,
+        ]);
+
+        $category = MaintenanceCategory::create([
+            'name' => 'Plumbing',
+            'description' => 'Water issues',
+            'is_active' => true,
+        ]);
+
+        $ticket = Ticket::create([
+            'title' => 'Leaking valve',
+            'description' => 'Main valve leaking',
+            'property_id' => $property->id,
+            'maintenance_category_id' => $category->id,
+            'reported_by' => $approver->id,
+            'assigned_to' => $technician->id,
+            'status' => 'logged',
+            'priority' => 'medium',
+            'requires_additional_cost' => false,
+        ]);
+
+        $this->actingAs($technician)
+            ->get(route('tickets.index'))
+            ->assertOk()
+            ->assertSeeText($ticket->title)
+            ->assertSeeText('Logged/New');
+
+        $this->actingAs($technician)
+            ->put(route('tickets.update', $ticket), [
+                'status' => 'in_progress',
+            ])
+            ->assertRedirect(route('tickets.index'));
+
+        $ticket->refresh();
+
+        $this->assertSame('in_progress', $ticket->status);
+        $this->assertNotNull($ticket->started_at);
+    }
 }

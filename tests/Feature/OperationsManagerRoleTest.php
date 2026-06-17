@@ -59,6 +59,8 @@ class OperationsManagerRoleTest extends TestCase
 
         $ticket = Ticket::query()->firstOrFail();
 
+        $this->assertSame('pending_approval', $ticket->status);
+
         $this->actingAs($operationsManager)
             ->put(route('tickets.update', $ticket), [
                 'title' => $ticket->title,
@@ -143,5 +145,46 @@ class OperationsManagerRoleTest extends TestCase
         $this->assertSame('approved', $costRequest->status);
         $this->assertSame($operationsManager->id, $costRequest->reviewed_by);
         $this->assertSame('in_progress', $ticket->status);
+    }
+
+    public function test_operations_manager_can_delete_ticket_via_web(): void
+    {
+        $operationsManager = User::create([
+            'name' => 'Operations Manager',
+            'email' => 'ops.delete@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_OPERATIONS_MANAGER,
+        ]);
+
+        $property = Property::create([
+            'name' => 'Kai Delete',
+            'code' => 'KAI-DEL',
+            'city' => 'Accra',
+            'state' => 'Greater Accra',
+            'address' => 'Delete Street',
+            'is_active' => true,
+        ]);
+
+        $category = MaintenanceCategory::create([
+            'name' => 'General',
+            'description' => 'General issues',
+            'is_active' => true,
+        ]);
+
+        $ticket = Ticket::create([
+            'title' => 'Remove me',
+            'description' => 'Ticket to be deleted',
+            'property_id' => $property->id,
+            'maintenance_category_id' => $category->id,
+            'reported_by' => $operationsManager->id,
+            'status' => 'pending_approval',
+            'priority' => 'medium',
+        ]);
+
+        $this->actingAs($operationsManager)
+            ->delete(route('tickets.destroy', $ticket))
+            ->assertRedirect(route('tickets.index'));
+
+        $this->assertDatabaseMissing('tickets', ['id' => $ticket->id]);
     }
 }

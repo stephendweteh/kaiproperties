@@ -25,8 +25,10 @@ class TicketController extends Controller
         $user = $request->user();
         $isTenant = $user?->hasRole(User::ROLE_TENANT) ?? false;
         $isTechnician = $user?->hasRole(User::ROLE_TECHNICIAN) ?? false;
-        $canManageTickets = $user ? $this->canManageTickets($user) : false;
-        $canCreateTickets = $isTenant || $canManageTickets;
+        $canApproveTickets = $user ? $this->canApproveTickets($user) : false;
+        $canEditTickets = $user ? $this->canEditTickets($user) : false;
+        $approverMode = $canApproveTickets && ! $canEditTickets;
+        $canCreateTickets = $isTenant || $canEditTickets;
 
         $tickets = Ticket::query()
             ->with([
@@ -37,7 +39,9 @@ class TicketController extends Controller
                 'attachments:id,ticket_id,file_path,file_name,attachment_type',
             ])
             ->when($isTenant, fn (Builder $builder) => $builder->where('reported_by', $request->user()->id))
-            ->when($isTechnician, fn (Builder $builder) => $builder->where('assigned_to', $request->user()->id))
+            ->when($isTechnician, fn (Builder $builder) => $builder
+                ->where('assigned_to', $request->user()->id)
+                ->whereIn('status', $this->technicianVisibleStatuses()))
             ->when($request->filled('status'), fn (Builder $builder) => $builder->where('status', $request->string('status')))
             ->when($request->filled('property_id'), fn (Builder $builder) => $builder->where('property_id', $request->integer('property_id')))
             ->when($request->filled('maintenance_category_id'), fn (Builder $builder) => $builder->where('maintenance_category_id', $request->integer('maintenance_category_id')))
@@ -61,8 +65,11 @@ class TicketController extends Controller
             'statuses' => Ticket::STATUSES,
             'properties' => Property::orderBy('name')->get(),
             'categories' => MaintenanceCategory::orderBy('name')->get(),
-            'canManageTickets' => $canManageTickets,
+            'isTechnician' => $isTechnician,
+            'canApproveTickets' => $canApproveTickets,
+            'canEditTickets' => $canEditTickets,
             'canCreateTickets' => $canCreateTickets,
+            'approverMode' => $approverMode,
             'technicians' => ($isTenant || $isTechnician)
                 ? collect()
                 : User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
@@ -73,9 +80,9 @@ class TicketController extends Controller
     {
         $user = request()->user();
         $isTenant = $user?->hasRole(User::ROLE_TENANT) ?? false;
-        $canManageTickets = $user ? $this->canManageTickets($user) : false;
+        $canCreateTickets = $user ? $this->canEditTickets($user) : false;
 
-        abort_unless($isTenant || $canManageTickets, 403);
+        abort_unless($isTenant || $canCreateTickets, 403);
 
         return view('tickets.create', [
             'properties' => Property::where('is_active', true)->orderBy('name')->get(),
@@ -88,12 +95,34 @@ class TicketController extends Controller
         ]);
     }
 
+    public function show(Ticket $ticket)
+    {
+        $user = request()->user();
+
+        abort_unless($this->canViewTicket($user, $ticket), 403);
+
+        $ticket->load([
+            'property',
+            'category',
+            'reporter:id,name',
+            'technician:id,name',
+            'attachments.uploader:id,name',
+        ]);
+
+        return view('tickets.show', [
+            'ticket' => $ticket,
+            'canEditTickets' => $this->canEditTickets($user),
+            'canApproveTickets' => $this->canApproveTickets($user),
+            'canTechnicianUpdate' => $this->canTechnicianWorkOnTicket($user, $ticket),
+        ]);
+    }
+
     public function store(Request $request)
     {
         $user = $request->user();
         $isTenant = $user?->hasRole(User::ROLE_TENANT) ?? false;
 
-        abort_unless($isTenant || ($user && $this->canManageTickets($user)), 403);
+        abort_unless($isTenant || ($user && $this->canEditTickets($user)), 403);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -105,6 +134,7 @@ class TicketController extends Controller
             'assigned_to' => $isTenant ? ['nullable'] : ['nullable', 'exists:users,id'],
             'priority' => ['required', 'in:low,medium,high,urgent'],
             'etd' => ['nullable', 'date'],
+            'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'image_attachments' => ['nullable', 'array', 'max:8'],
             'image_attachments.*' => ['file', 'image', 'max:5120'],
             'camera_attachment' => ['nullable', 'image', 'max:5120'],
@@ -117,43 +147,39 @@ class TicketController extends Controller
             $validated['assigned_to'] = null;
         }
 
-        $status = ! empty($validated['assigned_to'] ?? null) ? 'assigned' : 'logged';
-
         $ticket = Ticket::create([
             ...$validated,
-            'status' => $status,
+            'status' => $user?->hasRole(User::ROLE_OPERATIONS_MANAGER) ? 'pending_approval' : 'logged',
         ]);
 
         $this->storeAttachments($request, $ticket);
 
-        if (! empty($ticket->assigned_to)) {
-            $this->notificationService->sendTicketAssigned($ticket->fresh());
-        }
-
         return redirect()
             ->route('tickets.index')
-            ->with('success', 'Ticket created successfully.');
+            ->with('success', $ticket->status === 'pending_approval'
+                ? 'Ticket created and sent for approval.'
+                : 'Ticket created successfully.');
     }
 
     public function edit(Ticket $ticket)
     {
         $user = request()->user();
-        $technicianMode = false;
+        $technicianMode = $this->canTechnicianWorkOnTicket($user, $ticket);
 
-        if (! $this->canManageTickets($user)) {
-            abort_unless($this->canTechnicianWorkOnTicket($user, $ticket), 403);
-            $technicianMode = true;
-        }
+        abort_unless($this->canEditTickets($user) || $this->canApproveTickets($user) || $technicianMode, 403);
 
-        $ticket->load(['attachments.uploader:id,name']);
+        $approverMode = $this->canApproveTickets($user) && ! $this->canEditTickets($user);
+
+        $ticket->load(['reporter:id,name', 'technician:id,name', 'attachments.uploader:id,name']);
 
         return view('tickets.edit', [
             'ticket' => $ticket,
             'properties' => Property::where('is_active', true)->orderBy('name')->get(),
             'categories' => MaintenanceCategory::where('is_active', true)->orderBy('name')->get(),
             'priorities' => Ticket::PRIORITIES,
-            'statuses' => $technicianMode ? ['assigned', 'in_progress', 'completed'] : Ticket::STATUSES,
+            'statuses' => $technicianMode ? ['in_progress', 'completed'] : Ticket::STATUSES,
             'technicianMode' => $technicianMode,
+            'approverMode' => $approverMode,
             'technicians' => User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
         ]);
     }
@@ -161,14 +187,99 @@ class TicketController extends Controller
     public function update(Request $request, Ticket $ticket)
     {
         $user = $request->user();
-        $canManageTickets = $this->canManageTickets($user);
-        $technicianMode = false;
+        $canEditTickets = $this->canEditTickets($user);
+        $canApproveTickets = $this->canApproveTickets($user);
+        $canTechnicianUpdate = $this->canTechnicianWorkOnTicket($user, $ticket);
         $previousStatus = $ticket->status;
         $previousAssignedTo = (int) ($ticket->assigned_to ?? 0);
 
-        if (! $canManageTickets) {
-            abort_unless($this->canTechnicianWorkOnTicket($user, $ticket), 403);
-            $technicianMode = true;
+        abort_unless($canEditTickets || $canApproveTickets || $canTechnicianUpdate, 403);
+
+        if ($canTechnicianUpdate && ! $canEditTickets && ! $canApproveTickets) {
+            $validated = $request->validate([
+                'status' => ['required', 'in:in_progress,completed'],
+            ]);
+
+            if ($validated['status'] === 'in_progress' && ! $ticket->started_at) {
+                $ticket->started_at = now();
+            }
+
+            if ($validated['status'] === 'completed') {
+                if (! $ticket->started_at) {
+                    $ticket->started_at = now();
+                }
+
+                $ticket->completed_at = now();
+            }
+
+            $ticket->status = $validated['status'];
+            $ticket->save();
+
+            if ($previousStatus !== $ticket->status) {
+                $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
+            }
+
+            return redirect()
+                ->route('tickets.index')
+                ->with('success', 'Ticket status updated successfully.');
+        }
+
+        if ($canApproveTickets && ! $canEditTickets) {
+            $validated = $request->validate([
+                'assigned_to' => ['nullable', 'exists:users,id'],
+                'status' => ['required', 'in:logged,on_hold'],
+            ]);
+
+            $assignedTo = ! empty($validated['assigned_to'])
+                ? (int) $validated['assigned_to']
+                : (int) ($ticket->assigned_to ?? 0);
+
+            if ($assignedTo > 0) {
+                $technician = User::where('id', $assignedTo)
+                    ->where('role', User::ROLE_TECHNICIAN)
+                    ->first();
+
+                if (! $technician) {
+                    return back()->withErrors(['assigned_to' => 'Selected user is not a technician.'])->withInput();
+                }
+            }
+
+            if (in_array($validated['status'], $this->technicianVisibleStatuses(), true) && $assignedTo === 0) {
+                return back()->withErrors(['assigned_to' => 'Assign a technician before moving the ticket to this status.'])->withInput();
+            }
+
+            $attributes = [
+                'assigned_to' => $assignedTo > 0 ? $assignedTo : null,
+                'status' => $validated['status'],
+            ];
+
+            if ($attributes['status'] === 'in_progress' && ! $ticket->started_at) {
+                $attributes['started_at'] = now();
+            }
+
+            if ($attributes['status'] === 'completed') {
+                $attributes['completed_at'] = now();
+            }
+
+            if ($attributes['status'] === 'closed') {
+                $attributes['closed_at'] = now();
+            }
+
+            $ticket->update($attributes);
+
+            $ticket->refresh();
+
+            if ((int) ($ticket->assigned_to ?? 0) !== $previousAssignedTo || $previousStatus !== $ticket->status) {
+                $this->notificationService->sendTicketAssigned($ticket);
+            }
+
+            if ($previousStatus !== $ticket->status) {
+                $this->notificationService->sendTicketStatusChanged($ticket, $previousStatus);
+            }
+
+            return redirect()
+                ->route('tickets.index')
+                ->with('success', 'Ticket reviewed successfully.');
         }
 
         $validated = $request->validate([
@@ -177,12 +288,11 @@ class TicketController extends Controller
             'property_id' => ['required', 'exists:properties,id'],
             'maintenance_category_id' => ['required', 'exists:maintenance_categories,id'],
             'unit' => ['nullable', 'string', 'max:100'],
-            'assigned_to' => $technicianMode ? ['nullable'] : ['nullable', 'exists:users,id'],
-            'status' => $technicianMode
-                ? ['required', 'in:assigned,in_progress,completed']
-                : ['required', 'in:logged,assigned,in_progress,pending_approval,on_hold,completed,closed,rejected,overdue'],
+            'assigned_to' => ['nullable', 'exists:users,id'],
+            'status' => ['required', 'in:logged,assigned,in_progress,pending_approval,on_hold,completed,closed,rejected,overdue'],
             'priority' => ['required', 'in:low,medium,high,urgent'],
             'etd' => ['nullable', 'date'],
+            'estimated_cost' => ['nullable', 'numeric', 'min:0'],
             'image_attachments' => ['nullable', 'array', 'max:8'],
             'image_attachments.*' => ['file', 'image', 'max:5120'],
             'camera_attachment' => ['nullable', 'image', 'max:5120'],
@@ -191,11 +301,6 @@ class TicketController extends Controller
             'remove_attachment_ids' => ['nullable', 'array'],
             'remove_attachment_ids.*' => ['integer'],
         ]);
-
-        if ($technicianMode) {
-            unset($validated['assigned_to']);
-            $validated['assigned_to'] = $ticket->assigned_to;
-        }
 
         if (! $validated['assigned_to'] && $validated['status'] === 'assigned') {
             $validated['status'] = 'logged';
@@ -231,6 +336,89 @@ class TicketController extends Controller
         return redirect()
             ->route('tickets.index')
             ->with('success', 'Ticket updated successfully.');
+    }
+
+    public function destroy(Ticket $ticket)
+    {
+        $user = request()->user();
+
+        abort_unless($this->canEditTickets($user), 403);
+
+        $ticket->loadMissing('attachments:id,ticket_id,file_path');
+
+        foreach ($ticket->attachments as $attachment) {
+            Storage::disk('public')->delete($attachment->file_path);
+        }
+
+        $ticket->delete();
+
+        return redirect()
+            ->route('tickets.index')
+            ->with('success', 'Ticket deleted successfully.');
+    }
+
+    public function review(Request $request, Ticket $ticket)
+    {
+        $user = $request->user();
+        $canApproveTickets = $this->canApproveTickets($user);
+        $canEditTickets = $this->canEditTickets($user);
+        $expectsJson = $request->expectsJson();
+
+        abort_unless($canApproveTickets && ! $canEditTickets, 403);
+
+        $validated = $request->validate([
+            'decision' => ['required', 'in:approve,hold'],
+        ]);
+
+        if ($validated['decision'] === 'approve' && empty($ticket->assigned_to)) {
+            if ($expectsJson) {
+                return response()->json([
+                    'message' => 'Assign a technician before approving this ticket.',
+                ], 422);
+            }
+
+            return back()->withErrors(['decision' => 'Assign a technician before approving this ticket.']);
+        }
+
+        $newStatus = $validated['decision'] === 'approve' ? 'logged' : 'on_hold';
+
+        if ($ticket->status === $newStatus) {
+            if ($expectsJson) {
+                return response()->json([
+                    'message' => 'Ticket review action applied.',
+                    'data' => [
+                        'ticket_id' => $ticket->id,
+                        'status' => $ticket->status,
+                        'status_label' => $ticket->status === 'logged'
+                            ? 'Logged/New'
+                            : str($ticket->status)->replace('_', ' ')->title()->toString(),
+                    ],
+                ]);
+            }
+
+            return redirect()
+                ->route('tickets.show', $ticket)
+                ->with('success', 'Ticket review action applied.');
+        }
+
+        $ticket->update(['status' => $newStatus]);
+
+        if ($expectsJson) {
+            return response()->json([
+                'message' => 'Ticket review action applied.',
+                'data' => [
+                    'ticket_id' => $ticket->id,
+                    'status' => $ticket->status,
+                    'status_label' => $ticket->status === 'logged'
+                        ? 'Logged/New'
+                        : str($ticket->status)->replace('_', ' ')->title()->toString(),
+                ],
+            ]);
+        }
+
+        return redirect()
+            ->route('tickets.index')
+            ->with('success', 'Ticket review action applied.');
     }
 
     private function storeAttachments(Request $request, Ticket $ticket): void
@@ -294,13 +482,40 @@ class TicketController extends Controller
         }
     }
 
-    private function canManageTickets(?User $user): bool
+    private function canApproveTickets(?User $user): bool
+    {
+        return (bool) $user?->hasRole(User::ROLE_APPROVER);
+    }
+
+    private function canEditTickets(?User $user): bool
     {
         return (bool) $user?->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER]);
     }
 
+    private function canViewTicket(?User $user, Ticket $ticket): bool
+    {
+        if ($this->canEditTickets($user) || $this->canApproveTickets($user)) {
+            return true;
+        }
+
+        if ($user?->hasRole(User::ROLE_TENANT) && (int) $ticket->reported_by === (int) $user->id) {
+            return true;
+        }
+
+        return $this->canTechnicianWorkOnTicket($user, $ticket);
+    }
+
     private function canTechnicianWorkOnTicket(?User $user, Ticket $ticket): bool
     {
-        return (bool) ($user?->hasRole(User::ROLE_TECHNICIAN) && (int) $ticket->assigned_to === (int) $user->id);
+        return (bool) (
+            $user?->hasRole(User::ROLE_TECHNICIAN)
+            && (int) $ticket->assigned_to === (int) $user->id
+            && in_array($ticket->status, $this->technicianVisibleStatuses(), true)
+        );
+    }
+
+    private function technicianVisibleStatuses(): array
+    {
+        return ['logged', 'assigned', 'in_progress', 'on_hold', 'completed', 'closed', 'overdue'];
     }
 }
