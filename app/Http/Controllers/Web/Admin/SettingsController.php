@@ -3,8 +3,13 @@
 namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Setting;
+use App\Models\Ticket;
+use App\Models\TicketAttachment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
@@ -45,5 +50,34 @@ class SettingsController extends Controller
         }
 
         return redirect()->route('admin.settings.edit')->with('success', 'Settings updated successfully.');
+    }
+
+    public function resetData(Request $request)
+    {
+        $request->validate([
+            'confirm_reset' => ['required', 'accepted'],
+        ]);
+
+        $attachmentPaths = TicketAttachment::query()
+            ->pluck('file_path')
+            ->filter()
+            ->values();
+
+        DB::transaction(function (): void {
+            AuditLog::query()->delete();
+            Ticket::query()->delete();
+        });
+
+        foreach ($attachmentPaths as $attachmentPath) {
+            Storage::disk('public')->delete($attachmentPath);
+        }
+
+        foreach (File::glob(storage_path('logs/*.log')) ?: [] as $logFile) {
+            File::delete($logFile);
+        }
+
+        return redirect()
+            ->route('admin.settings.edit')
+            ->with('success', 'Operational logs and entries have been reset. Categories were preserved.');
     }
 }

@@ -35,5 +35,6 @@ Route::middleware('auth')->group(function (): void {
 		Route::resource('users', AdminUserController::class)->except(['show']);
 		Route::get('settings', [AdminSettingsController::class, 'edit'])->name('settings.edit');
 		Route::put('settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+		Route::post('settings/reset-data', [AdminSettingsController::class, 'resetData'])->name('settings.reset-data');
 	});
 });

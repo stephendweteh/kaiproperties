@@ -26,7 +26,7 @@ class UserStoreRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:30'],
-            'role' => ['required', 'in:tenant,admin,technician,approver'],
+            'role' => ['required', 'in:tenant,admin,operations_manager,technician,approver'],
             'password' => ['required', Password::min(8)],
         ];
     }

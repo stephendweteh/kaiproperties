@@ -443,6 +443,39 @@ button,
     border: 1px solid #c6d9d5;
 }
 
+.password-input-wrap {
+    position: relative;
+}
+
+.password-input-wrap input {
+    padding-right: 4.6rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: #1b6156;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.22rem 0.4rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.password-toggle:hover {
+    color: #11443c;
+}
+
+.password-toggle:focus-visible {
+    outline: 2px solid #1b6156;
+    outline-offset: 1px;
+    border-radius: 4px;
+}
+
 .btn-login {
     width: 100%;
     margin-top: 0.3rem;
@@ -471,7 +504,7 @@ button,
 
 .status-in_progress,
 .status-pending_approval {
-    background: #cf8a1e;
+    background: #e0b300;
 }
 
 .status-overdue,
@@ -489,6 +522,13 @@ button,
 
 .status-on_hold {
     background: #9a5ebb;
+}
+
+.status-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
 }
 
 .ticket-attachment-thumbs {

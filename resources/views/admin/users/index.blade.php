@@ -30,7 +30,7 @@
                     </td>
                     <td>{{ $u->name }}</td>
                     <td>{{ $u->email }}</td>
-                    <td>{{ str($u->role)->title() }}</td>
+                    <td>{{ $u->role === \App\Models\User::ROLE_ADMIN ? 'Super Admin' : str($u->role)->replace('_', ' ')->title() }}</td>
                     <td>{{ $u->phone ?: '-' }}</td>
                     <td>
                         <div class="row-actions">

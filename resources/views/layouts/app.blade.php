@@ -100,7 +100,7 @@
 
             <div class="sidebar-footer">
                 <div class="muted">{{ auth()->user()->name }}</div>
-                <div class="muted" style="font-size: 0.84rem;">{{ str(auth()->user()->role)->replace('_', ' ')->title() }}</div>
+                <div class="muted" style="font-size: 0.84rem;">{{ auth()->user()->role === \App\Models\User::ROLE_ADMIN ? 'Super Admin' : str(auth()->user()->role)->replace('_', ' ')->title() }}</div>
                 <a class="{{ request()->routeIs('profile.*') ? 'active' : '' }}" href="{{ route('profile.edit') }}" style="display:inline-block; margin-top: 0.7rem; text-decoration:none; color:#d7f6ef; background:rgba(255,255,255,0.1); padding:0.48rem 0.8rem; border-radius:8px;">
                     <span class="nav-link-inner">
                         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">

@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Admin Login'])
+@extends('layouts.app', ['title' => 'Super Admin Login'])
 
 @section('content')
     @php
@@ -42,7 +42,10 @@
 
                     <div class="field-group">
                         <label for="password">Password</label>
-                        <input id="password" type="password" name="password" placeholder="Enter your password" required>
+                        <div class="password-input-wrap">
+                            <input id="password" type="password" name="password" placeholder="Enter your password" required>
+                            <button type="button" class="password-toggle" data-password-toggle aria-controls="password" aria-label="Show password" aria-pressed="false">Show</button>
+                        </div>
                     </div>
 
                     <button type="submit" class="btn-login">Login</button>
@@ -50,4 +53,24 @@
             </div>
         </article>
     </section>
+
+    <script>
+        (function () {
+            const toggle = document.querySelector('[data-password-toggle]');
+            const input = document.getElementById('password');
+
+            if (!toggle || !input) {
+                return;
+            }
+
+            toggle.addEventListener('click', function () {
+                const isHidden = input.type === 'password';
+
+                input.type = isHidden ? 'text' : 'password';
+                toggle.textContent = isHidden ? 'Hide' : 'Show';
+                toggle.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+                toggle.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+            });
+        })();
+    </script>
 @endsection

@@ -17,6 +17,12 @@ class TicketController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
+        $isTenant = $user?->hasRole(User::ROLE_TENANT) ?? false;
+        $isTechnician = $user?->hasRole(User::ROLE_TECHNICIAN) ?? false;
+        $canManageTickets = $user ? $this->canManageTickets($user) : false;
+        $canCreateTickets = $isTenant || $canManageTickets;
+
         $tickets = Ticket::query()
             ->with([
                 'property',
@@ -25,6 +31,8 @@ class TicketController extends Controller
                 'technician:id,name',
                 'attachments:id,ticket_id,file_path,file_name,attachment_type',
             ])
+            ->when($isTenant, fn (Builder $builder) => $builder->where('reported_by', $request->user()->id))
+            ->when($isTechnician, fn (Builder $builder) => $builder->where('assigned_to', $request->user()->id))
             ->when($request->filled('status'), fn (Builder $builder) => $builder->where('status', $request->string('status')))
             ->when($request->filled('property_id'), fn (Builder $builder) => $builder->where('property_id', $request->integer('property_id')))
             ->when($request->filled('maintenance_category_id'), fn (Builder $builder) => $builder->where('maintenance_category_id', $request->integer('maintenance_category_id')))
@@ -48,31 +56,48 @@ class TicketController extends Controller
             'statuses' => Ticket::STATUSES,
             'properties' => Property::orderBy('name')->get(),
             'categories' => MaintenanceCategory::orderBy('name')->get(),
-            'technicians' => User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
+            'canManageTickets' => $canManageTickets,
+            'canCreateTickets' => $canCreateTickets,
+            'technicians' => ($isTenant || $isTechnician)
+                ? collect()
+                : User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
         ]);
     }
 
     public function create()
     {
+        $user = request()->user();
+        $isTenant = $user?->hasRole(User::ROLE_TENANT) ?? false;
+        $canManageTickets = $user ? $this->canManageTickets($user) : false;
+
+        abort_unless($isTenant || $canManageTickets, 403);
+
         return view('tickets.create', [
             'properties' => Property::where('is_active', true)->orderBy('name')->get(),
             'categories' => MaintenanceCategory::where('is_active', true)->orderBy('name')->get(),
             'priorities' => Ticket::PRIORITIES,
-            'reporters' => User::orderBy('name')->get(),
-            'technicians' => User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
+            'reporters' => $isTenant ? collect() : User::orderBy('name')->get(),
+            'technicians' => $isTenant
+                ? collect()
+                : User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = $request->user();
+        $isTenant = $user?->hasRole(User::ROLE_TENANT) ?? false;
+
+        abort_unless($isTenant || ($user && $this->canManageTickets($user)), 403);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'property_id' => ['required', 'exists:properties,id'],
             'maintenance_category_id' => ['required', 'exists:maintenance_categories,id'],
             'unit' => ['nullable', 'string', 'max:100'],
-            'reported_by' => ['required', 'exists:users,id'],
-            'assigned_to' => ['nullable', 'exists:users,id'],
+            'reported_by' => $isTenant ? ['nullable'] : ['required', 'exists:users,id'],
+            'assigned_to' => $isTenant ? ['nullable'] : ['nullable', 'exists:users,id'],
             'priority' => ['required', 'in:low,medium,high,urgent'],
             'etd' => ['nullable', 'date'],
             'image_attachments' => ['nullable', 'array', 'max:8'],
@@ -81,6 +106,11 @@ class TicketController extends Controller
             'document_attachments' => ['nullable', 'array', 'max:8'],
             'document_attachments.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,txt,csv', 'max:10240'],
         ]);
+
+        if ($isTenant) {
+            $validated['reported_by'] = $request->user()->id;
+            $validated['assigned_to'] = null;
+        }
 
         $status = ! empty($validated['assigned_to'] ?? null) ? 'assigned' : 'logged';
 
@@ -98,6 +128,14 @@ class TicketController extends Controller
 
     public function edit(Ticket $ticket)
     {
+        $user = request()->user();
+        $technicianMode = false;
+
+        if (! $this->canManageTickets($user)) {
+            abort_unless($this->canTechnicianWorkOnTicket($user, $ticket), 403);
+            $technicianMode = true;
+        }
+
         $ticket->load(['attachments.uploader:id,name']);
 
         return view('tickets.edit', [
@@ -105,21 +143,33 @@ class TicketController extends Controller
             'properties' => Property::where('is_active', true)->orderBy('name')->get(),
             'categories' => MaintenanceCategory::where('is_active', true)->orderBy('name')->get(),
             'priorities' => Ticket::PRIORITIES,
-            'statuses' => Ticket::STATUSES,
+            'statuses' => $technicianMode ? ['assigned', 'in_progress', 'completed'] : Ticket::STATUSES,
+            'technicianMode' => $technicianMode,
             'technicians' => User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
         ]);
     }
 
     public function update(Request $request, Ticket $ticket)
     {
+        $user = $request->user();
+        $canManageTickets = $this->canManageTickets($user);
+        $technicianMode = false;
+
+        if (! $canManageTickets) {
+            abort_unless($this->canTechnicianWorkOnTicket($user, $ticket), 403);
+            $technicianMode = true;
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'property_id' => ['required', 'exists:properties,id'],
             'maintenance_category_id' => ['required', 'exists:maintenance_categories,id'],
             'unit' => ['nullable', 'string', 'max:100'],
-            'assigned_to' => ['nullable', 'exists:users,id'],
-            'status' => ['required', 'in:logged,assigned,in_progress,pending_approval,on_hold,completed,closed,rejected,overdue'],
+            'assigned_to' => $technicianMode ? ['nullable'] : ['nullable', 'exists:users,id'],
+            'status' => $technicianMode
+                ? ['required', 'in:assigned,in_progress,completed']
+                : ['required', 'in:logged,assigned,in_progress,pending_approval,on_hold,completed,closed,rejected,overdue'],
             'priority' => ['required', 'in:low,medium,high,urgent'],
             'etd' => ['nullable', 'date'],
             'image_attachments' => ['nullable', 'array', 'max:8'],
@@ -130,6 +180,11 @@ class TicketController extends Controller
             'remove_attachment_ids' => ['nullable', 'array'],
             'remove_attachment_ids.*' => ['integer'],
         ]);
+
+        if ($technicianMode) {
+            unset($validated['assigned_to']);
+            $validated['assigned_to'] = $ticket->assigned_to;
+        }
 
         if (! $validated['assigned_to'] && $validated['status'] === 'assigned') {
             $validated['status'] = 'logged';
@@ -216,5 +271,15 @@ class TicketController extends Controller
             Storage::disk('public')->delete($attachment->file_path);
             $attachment->delete();
         }
+    }
+
+    private function canManageTickets(?User $user): bool
+    {
+        return (bool) $user?->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER]);
+    }
+
+    private function canTechnicianWorkOnTicket(?User $user, Ticket $ticket): bool
+    {
+        return (bool) ($user?->hasRole(User::ROLE_TECHNICIAN) && (int) $ticket->assigned_to === (int) $user->id);
     }
 }

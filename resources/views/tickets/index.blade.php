@@ -28,20 +28,35 @@
                 @endforeach
             </select>
 
-            <select name="assigned_to">
-                <option value="">All Technicians</option>
-                @foreach($technicians as $technician)
-                    <option value="{{ $technician->id }}" @selected((string) request('assigned_to') === (string) $technician->id)>{{ $technician->name }}</option>
-                @endforeach
-            </select>
+            @if($technicians->isNotEmpty())
+                <select name="assigned_to">
+                    <option value="">All Technicians</option>
+                    @foreach($technicians as $technician)
+                        <option value="{{ $technician->id }}" @selected((string) request('assigned_to') === (string) $technician->id)>{{ $technician->name }}</option>
+                    @endforeach
+                </select>
+            @endif
         </div>
 
         <button type="submit">Apply Filters</button>
     </form>
 
-    <div style="display: flex; justify-content: flex-end; margin-bottom: 0.7rem;">
-        <a class="btn" href="{{ route('tickets.create') }}">Create Ticket</a>
-    </div>
+    @if($canCreateTickets)
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 0.7rem;">
+            <a class="btn" href="{{ route('tickets.create') }}">Create Ticket</a>
+        </div>
+    @endif
+
+    <section class="card" style="margin-bottom: 0.9rem;">
+        <h3>Status Colors</h3>
+        <div class="status-legend">
+            <span class="status-pill status-logged">Logged/New</span>
+            <span class="status-pill status-in_progress">In Progress</span>
+            <span class="status-pill status-overdue">Overdue</span>
+            <span class="status-pill status-completed">Completed</span>
+            <span class="status-pill status-closed">Closed</span>
+        </div>
+    </section>
 
     <div class="card table-wrap">
         <table>
@@ -108,7 +123,13 @@
                             @endif
                         @endif
                     </td>
-                    <td><a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">Edit</a></td>
+                    <td>
+                        @if($canManageTickets || (auth()->user()?->hasRole(\App\Models\User::ROLE_TECHNICIAN) && (int) $ticket->assigned_to === (int) auth()->id()))
+                            <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">Edit</a>
+                        @else
+                            <span class="muted">View Only</span>
+                        @endif
+                    </td>
                 </tr>
             @empty
                 <tr>

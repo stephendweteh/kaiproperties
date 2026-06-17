@@ -34,6 +34,14 @@ class DatabaseSeeder extends Seeder
         ]);
 
         User::query()->create([
+            'name' => 'Operations Manager',
+            'email' => 'ops.manager@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_OPERATIONS_MANAGER,
+            'phone' => '08000000006',
+        ]);
+
+        User::query()->create([
             'name' => 'Field Technician 1',
             'email' => 'tech1@kai.local',
             'password' => 'password',

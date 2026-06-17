@@ -32,6 +32,17 @@
     </section>
 
     <section class="card" style="margin-top: 1rem;">
+        <h3>Status Colors</h3>
+        <div class="status-legend">
+            <span class="status-pill status-logged">Logged/New</span>
+            <span class="status-pill status-in_progress">In Progress</span>
+            <span class="status-pill status-overdue">Overdue</span>
+            <span class="status-pill status-completed">Completed</span>
+            <span class="status-pill status-closed">Closed</span>
+        </div>
+    </section>
+
+    <section class="card" style="margin-top: 1rem;">
         <h3>Technician Workload</h3>
         <div class="table-wrap">
             <table>

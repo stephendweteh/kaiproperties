@@ -20,11 +20,11 @@ class EnsureAdmin
         if (! $user || $user->role !== 'admin') {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Admin access required.',
+                    'message' => 'Super Admin access required.',
                 ], 403);
             }
 
-            abort(403, 'Admin access required.');
+            abort(403, 'Super Admin access required.');
         }
 
         return $next($request);

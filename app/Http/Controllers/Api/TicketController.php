@@ -90,7 +90,7 @@ class TicketController extends Controller
     {
         $user = $request->user();
 
-        if (! $user->hasRole([User::ROLE_ADMIN, User::ROLE_APPROVER])) {
+        if (! $user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER])) {
             return response()->json(['message' => 'You do not have permission to assign tickets.'], 403);
         }
 
@@ -121,6 +121,10 @@ class TicketController extends Controller
 
         if ($user->hasRole(User::ROLE_TECHNICIAN) && (int) $ticket->assigned_to !== (int) $user->id) {
             return response()->json(['message' => 'You can only update your assigned tickets.'], 403);
+        }
+
+        if ($user->hasRole(User::ROLE_TECHNICIAN) && ! in_array($request->string('status')->toString(), ['assigned', 'in_progress', 'completed'], true)) {
+            return response()->json(['message' => 'Technicians can only move assigned work to in progress or completed.'], 403);
         }
 
         if ($user->hasRole(User::ROLE_TENANT)) {
@@ -184,8 +188,8 @@ class TicketController extends Controller
     {
         $user = $request->user();
 
-        if (! $user->hasRole([User::ROLE_APPROVER, User::ROLE_ADMIN])) {
-            return response()->json(['message' => 'Only approvers/admins can review cost requests.'], 403);
+        if (! $user->hasRole([User::ROLE_APPROVER, User::ROLE_OPERATIONS_MANAGER, User::ROLE_ADMIN])) {
+            return response()->json(['message' => 'Only approvers, operations managers, or admins can review cost requests.'], 403);
         }
 
         $validated = $request->validated();
@@ -209,7 +213,7 @@ class TicketController extends Controller
 
     private function authorizeTicketAccess(User $user, Ticket $ticket): void
     {
-        if ($user->hasRole([User::ROLE_ADMIN, User::ROLE_APPROVER])) {
+        if ($user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER, User::ROLE_APPROVER])) {
             return;
         }
 

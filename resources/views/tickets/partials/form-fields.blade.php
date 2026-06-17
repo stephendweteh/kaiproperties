@@ -1,5 +1,7 @@
 @php
     $editMode = $editMode ?? false;
+    $isTenant = auth()->user()?->hasRole(\App\Models\User::ROLE_TENANT) ?? false;
+    $technicianMode = $technicianMode ?? false;
 @endphp
 
 <div class="form-grid">
@@ -34,15 +36,19 @@
     </div>
 
     @if($editMode)
-        <div>
-            <label for="assigned_to">Assigned Technician</label>
-            <select id="assigned_to" name="assigned_to">
-                <option value="">Unassigned</option>
-                @foreach($technicians as $technician)
-                    <option value="{{ $technician->id }}" @selected((string) old('assigned_to', $ticket->assigned_to ?? '') === (string) $technician->id)>{{ $technician->name }}</option>
-                @endforeach
-            </select>
-        </div>
+        @if(! $technicianMode)
+            <div>
+                <label for="assigned_to">Assigned Technician</label>
+                <select id="assigned_to" name="assigned_to">
+                    <option value="">Unassigned</option>
+                    @foreach($technicians as $technician)
+                        <option value="{{ $technician->id }}" @selected((string) old('assigned_to', $ticket->assigned_to ?? '') === (string) $technician->id)>{{ $technician->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        @else
+            <input type="hidden" name="assigned_to" value="{{ $ticket->assigned_to }}">
+        @endif
 
         <div>
             <label for="status">Status</label>
@@ -53,25 +59,29 @@
             </select>
         </div>
     @else
-        <div>
-            <label for="reported_by">Reporter</label>
-            <select id="reported_by" name="reported_by" required>
-                <option value="">Select Reporter</option>
-                @foreach($reporters as $reporter)
-                    <option value="{{ $reporter->id }}" @selected((string) old('reported_by') === (string) $reporter->id)>{{ $reporter->name }} ({{ $reporter->role }})</option>
-                @endforeach
-            </select>
-        </div>
+        @if($isTenant)
+            <input type="hidden" name="reported_by" value="{{ auth()->id() }}">
+        @else
+            <div>
+                <label for="reported_by">Reporter</label>
+                <select id="reported_by" name="reported_by" required>
+                    <option value="">Select Reporter</option>
+                    @foreach($reporters as $reporter)
+                        <option value="{{ $reporter->id }}" @selected((string) old('reported_by') === (string) $reporter->id)>{{ $reporter->name }} ({{ $reporter->role }})</option>
+                    @endforeach
+                </select>
+            </div>
 
-        <div>
-            <label for="assigned_to">Assign Technician (optional)</label>
-            <select id="assigned_to" name="assigned_to">
-                <option value="">Unassigned</option>
-                @foreach($technicians as $technician)
-                    <option value="{{ $technician->id }}" @selected((string) old('assigned_to') === (string) $technician->id)>{{ $technician->name }}</option>
-                @endforeach
-            </select>
-        </div>
+            <div>
+                <label for="assigned_to">Assign Technician (optional)</label>
+                <select id="assigned_to" name="assigned_to">
+                    <option value="">Unassigned</option>
+                    @foreach($technicians as $technician)
+                        <option value="{{ $technician->id }}" @selected((string) old('assigned_to') === (string) $technician->id)>{{ $technician->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        @endif
     @endif
 
     <div>
