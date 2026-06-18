@@ -5,12 +5,78 @@ namespace App\Services;
 use App\Models\CostRequest;
 use App\Models\Setting;
 use App\Models\Ticket;
+use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class NotificationService
 {
+    public function sendSignupPendingApproval(User $user): void
+    {
+        $subject = 'Sign-up Pending Approval';
+        $message = "Hello {$user->name},\n\nYour sign-up request has been received and is pending operations manager approval.";
+        $smsMessage = 'Your sign-up is pending approval.';
+
+        $this->sendEmail($user->email, $subject, $message);
+        $this->sendSms($user->phone, $smsMessage);
+
+        $opsSubject = 'New Sign-up Pending Approval: '.$user->name;
+        $opsMessage = "A new sign-up requires approval.\n\nName: {$user->name}\nEmail: {$user->email}\nRole: {$user->role}";
+        $opsSms = "Pending signup: {$user->name}";
+
+        $this->notifyOperationsManagers($opsSubject, $opsMessage, $opsSms);
+    }
+
+    public function sendUserApproved(User $user): void
+    {
+        $subject = 'Account Approved';
+        $message = "Hello {$user->name},\n\nYour account has been approved. You can now sign in to the Kai Properties maintenance system.";
+        $smsMessage = 'Your account has been approved. You can now sign in.';
+
+        $this->sendEmail($user->email, $subject, $message);
+        $this->sendSms($user->phone, $smsMessage);
+
+        $opsSubject = 'User Account Approved: '.$user->name;
+        $opsMessage = "A user account has been approved.\n\nName: {$user->name}\nEmail: {$user->email}\nRole: {$user->role}";
+        $opsSms = "User approved: {$user->name}";
+
+        $this->notifyOperationsManagers($opsSubject, $opsMessage, $opsSms);
+    }
+
+    public function sendUserCreated(User $user): void
+    {
+        $subject = 'Account Created';
+        $message = "Hello {$user->name},\n\nYour account has been created successfully. You can now sign in to the Kai Properties maintenance system.";
+        $smsMessage = 'Your Kai Properties account has been created successfully.';
+
+        $this->sendEmail($user->email, $subject, $message);
+        $this->sendSms($user->phone, $smsMessage);
+
+        $opsSubject = 'User Account Created: '.$user->name;
+        $opsMessage = "A new user account has been created.\n\nName: {$user->name}\nEmail: {$user->email}\nRole: {$user->role}";
+        $opsSms = "User created: {$user->name} ({$user->role})";
+
+        $this->notifyOperationsManagers($opsSubject, $opsMessage, $opsSms);
+    }
+
+    public function sendUserDeleted(User $user): void
+    {
+        $subject = 'Account Deleted';
+        $message = "Hello {$user->name},\n\nYour account has been deleted from the Kai Properties maintenance system.";
+        $smsMessage = 'Your Kai Properties account has been deleted.';
+
+        $this->sendEmail($user->email, $subject, $message);
+        $this->sendSms($user->phone, $smsMessage);
+
+        $opsSubject = 'User Account Deleted: '.$user->name;
+        $opsMessage = "A user account has been deleted.\n\nName: {$user->name}\nEmail: {$user->email}\nRole: {$user->role}";
+        $opsSms = "User deleted: {$user->name} ({$user->role})";
+
+        $this->notifyOperationsManagers($opsSubject, $opsMessage, $opsSms);
+    }
+
     public function sendTicketAssigned(Ticket $ticket): void
     {
         $ticket->loadMissing(['technician:id,name,email,phone']);
@@ -28,27 +94,71 @@ class NotificationService
 
         $this->sendEmail($technician->email, $subject, $message);
         $this->sendSms($technician->phone, "Assigned {$ticket->ticket_no}: {$ticket->title}");
+
+        $this->notifyOperationsManagers(
+            $subject,
+            "Ticket {$ticket->ticket_no} has been assigned to {$technician->name}.\n\nTitle: {$ticket->title}",
+            "Ticket assigned: {$ticket->ticket_no}"
+        );
     }
 
     public function sendTicketStatusChanged(Ticket $ticket, string $oldStatus): void
     {
-        $ticket->loadMissing(['reporter:id,name,email,phone']);
-
-        $reporter = $ticket->reporter;
-
-        if (! $reporter) {
-            return;
-        }
+        $ticket->loadMissing([
+            'reporter:id,name,email,phone',
+            'technician:id,name,email,phone',
+        ]);
 
         $newStatus = str($ticket->status)->replace('_', ' ')->title()->toString();
         $oldStatusLabel = str($oldStatus)->replace('_', ' ')->title()->toString();
 
         $subject = 'Ticket Status Update: '.$ticket->ticket_no;
-        $message = "Hello {$reporter->name},\n\n".
-            "Your ticket {$ticket->ticket_no} changed from {$oldStatusLabel} to {$newStatus}.";
+        $message = "Ticket {$ticket->ticket_no} changed from {$oldStatusLabel} to {$newStatus}.\n\nTitle: {$ticket->title}";
+        $smsMessage = "{$ticket->ticket_no} status: {$newStatus}";
 
-        $this->sendEmail($reporter->email, $subject, $message);
-        $this->sendSms($reporter->phone, "{$ticket->ticket_no} status: {$newStatus}");
+        $recipients = collect([$ticket->reporter, $ticket->technician])
+            ->filter()
+            ->merge($this->operationsManagers());
+
+        $this->notifyRecipients($recipients, $subject, $message, $smsMessage);
+    }
+
+    public function sendTicketLogged(Ticket $ticket): void
+    {
+        $ticket->loadMissing([
+            'reporter:id,name,email,phone',
+            'technician:id,name,email,phone',
+        ]);
+
+        $statusLabel = $ticket->status === 'pending_approval' ? 'Pending Approval' : 'Logged/New';
+
+        $subject = 'Ticket Logged: '.$ticket->ticket_no;
+        $message = "Ticket {$ticket->ticket_no} has been logged and is currently {$statusLabel}.\n\nTitle: {$ticket->title}";
+        $smsMessage = "Ticket {$ticket->ticket_no} logged ({$statusLabel}).";
+
+        $recipients = collect([$ticket->reporter, $ticket->technician])
+            ->filter()
+            ->merge($this->operationsManagers());
+
+        $this->notifyRecipients($recipients, $subject, $message, $smsMessage);
+    }
+
+    public function sendTicketDeleted(Ticket $ticket): void
+    {
+        $ticket->loadMissing([
+            'reporter:id,name,email,phone',
+            'technician:id,name,email,phone',
+        ]);
+
+        $subject = 'Ticket Deleted: '.$ticket->ticket_no;
+        $message = "Ticket {$ticket->ticket_no} has been deleted.\n\nTitle: {$ticket->title}";
+        $smsMessage = "Ticket deleted: {$ticket->ticket_no}";
+
+        $recipients = collect([$ticket->reporter, $ticket->technician])
+            ->filter()
+            ->merge($this->operationsManagers());
+
+        $this->notifyRecipients($recipients, $subject, $message, $smsMessage);
     }
 
     public function sendCostRequestReviewed(CostRequest $costRequest): void
@@ -169,5 +279,29 @@ class NotificationService
 
             return false;
         }
+    }
+
+    private function operationsManagers(): Collection
+    {
+        return User::query()
+            ->where('role', User::ROLE_OPERATIONS_MANAGER)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'phone', 'role']);
+    }
+
+    private function notifyOperationsManagers(string $subject, string $message, string $smsMessage): void
+    {
+        $this->notifyRecipients($this->operationsManagers(), $subject, $message, $smsMessage);
+    }
+
+    private function notifyRecipients(iterable $recipients, string $subject, string $message, string $smsMessage): void
+    {
+        collect($recipients)
+            ->filter(fn ($recipient) => $recipient instanceof User)
+            ->unique('id')
+            ->each(function (User $recipient) use ($subject, $message, $smsMessage): void {
+                $this->sendEmail($recipient->email, $subject, $message);
+                $this->sendSms($recipient->phone, $smsMessage);
+            });
     }
 }

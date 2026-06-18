@@ -70,6 +70,8 @@ class TicketController extends Controller
             'priority' => $validated['priority'] ?? 'medium',
         ]);
 
+        $this->notificationService->sendTicketLogged($ticket->fresh(['reporter', 'technician']));
+
         return response()->json([
             'message' => 'Ticket created and sent for approval.',
             'data' => TicketResource::make($ticket->load(['property', 'category', 'reporter'])),
@@ -144,6 +146,7 @@ class TicketController extends Controller
         }
 
         $validated = $request->validated();
+        $previousStatus = $ticket->status;
 
         $attributes = ['status' => $validated['status']];
 
@@ -180,6 +183,7 @@ class TicketController extends Controller
         }
 
         $validated = $request->validated();
+        $previousStatus = $ticket->status;
 
         $costRequest = CostRequest::create([
             'ticket_id' => $ticket->id,
@@ -193,6 +197,10 @@ class TicketController extends Controller
             'status' => 'pending_approval',
             'requires_additional_cost' => true,
         ]);
+
+        if ($previousStatus !== $ticket->status) {
+            $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
+        }
 
         return response()->json([
             'message' => 'Cost request submitted for approval.',
@@ -209,6 +217,7 @@ class TicketController extends Controller
         }
 
         $validated = $request->validated();
+        $previousStatus = $costRequest->ticket->status;
 
         $costRequest->update([
             'status' => $validated['status'],
@@ -220,6 +229,10 @@ class TicketController extends Controller
         $nextTicketStatus = $validated['status'] === 'approved' ? 'in_progress' : 'on_hold';
 
         $costRequest->ticket()->update(['status' => $nextTicketStatus]);
+
+        if ($previousStatus !== $nextTicketStatus) {
+            $this->notificationService->sendTicketStatusChanged($costRequest->ticket->fresh(), $previousStatus);
+        }
 
         $this->notificationService->sendCostRequestReviewed($costRequest->fresh());
 

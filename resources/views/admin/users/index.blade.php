@@ -14,6 +14,7 @@
                 <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
+                <th>Approval</th>
                 <th>Phone</th>
                 <th>Action</th>
             </tr>
@@ -31,9 +32,22 @@
                     <td>{{ $u->name }}</td>
                     <td>{{ $u->email }}</td>
                     <td>{{ $u->role === \App\Models\User::ROLE_ADMIN ? 'Super Admin' : str($u->role)->replace('_', ' ')->title() }}</td>
+                    <td>
+                        @if($u->is_approved)
+                            <span class="muted">Approved</span>
+                        @else
+                            <span style="color:#b45309; font-weight:600;">Pending</span>
+                        @endif
+                    </td>
                     <td>{{ $u->phone ?: '-' }}</td>
                     <td>
                         <div class="row-actions">
+                            @if(! $u->is_approved)
+                                <form method="POST" action="{{ route('admin.users.approve', $u) }}">
+                                    @csrf
+                                    <button type="submit" class="btn">Approve</button>
+                                </form>
+                            @endif
                             <a class="btn btn-alt" href="{{ route('admin.users.edit', $u) }}">Edit</a>
                             <form method="POST" action="{{ route('admin.users.destroy', $u) }}" onsubmit="return confirm('Delete user?')">
                                 @csrf
@@ -44,7 +58,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="6">No users found.</td></tr>
+                <tr><td colspan="7">No users found.</td></tr>
             @endforelse
             </tbody>
         </table>

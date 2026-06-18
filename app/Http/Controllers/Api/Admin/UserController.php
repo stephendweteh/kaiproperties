@@ -8,9 +8,14 @@ use App\Http\Requests\Api\Admin\UserUpdateRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use App\Services\NotificationService;
 
 class UserController extends Controller
 {
+    public function __construct(private readonly NotificationService $notificationService)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -25,6 +30,8 @@ class UserController extends Controller
     public function store(UserStoreRequest $request)
     {
         $user = User::create($request->validated());
+
+        $this->notificationService->sendUserCreated($user);
 
         return response()->json([
             'message' => 'User created successfully.',
@@ -73,6 +80,8 @@ class UserController extends Controller
                 'message' => 'User cannot be deleted because the user is linked to existing tickets or records.',
             ], 422);
         }
+
+        $this->notificationService->sendUserDeleted($user);
 
         return response()->json([
             'message' => 'User deleted successfully.',

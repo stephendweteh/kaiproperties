@@ -50,6 +50,12 @@
 
                     <button type="submit" class="btn-login">Login</button>
                 </form>
+
+                <div class="card" style="margin-top: 1rem; background:#f8fafc; border:1px solid #e2e8f0; box-shadow:none;">
+                    <h4 style="margin:0 0 0.35rem;">Need an account?</h4>
+                    <p class="muted" style="margin:0 0 0.8rem;">Request access. All requests go to Operations Manager.</p>
+                    <a class="btn" href="{{ route('signup.show') }}" style="display:inline-block; text-decoration:none;">Request Access</a>
+                </div>
             </div>
         </article>
     </section>

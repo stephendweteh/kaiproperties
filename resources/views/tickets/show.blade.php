@@ -82,7 +82,7 @@
     </section>
 
     <section class="card" style="margin-bottom:1rem;">
-        <h3 style="margin-top:0;">Fault Description</h3>
+        <h3 style="margin-top:0;">Description</h3>
         <p style="margin-bottom:0; white-space:pre-wrap;">{{ $ticket->description }}</p>
     </section>
 

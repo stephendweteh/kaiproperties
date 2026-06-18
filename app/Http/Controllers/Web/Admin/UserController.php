@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -13,6 +14,10 @@ use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
+    public function __construct(private readonly NotificationService $notificationService)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -71,12 +76,18 @@ class UserController extends Controller
         $photo = $request->file('profile_photo');
         unset($validated['profile_photo']);
 
+        $validated['is_approved'] = true;
+        $validated['approved_at'] = now();
+        $validated['approved_by'] = $request->user()?->id;
+
         $user = User::create($validated);
 
         if ($photo) {
             $path = $photo->store('users/profile-photos', 'public');
             $user->update(['profile_photo_path' => $path]);
         }
+
+        $this->notificationService->sendUserCreated($user);
 
         return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
     }
@@ -156,6 +167,25 @@ class UserController extends Controller
             Storage::disk('public')->delete($photoPath);
         }
 
+        $this->notificationService->sendUserDeleted($user);
+
         return redirect()->route('admin.users.index')->with('success', 'User deleted successfully.');
+    }
+
+    public function approve(Request $request, User $user)
+    {
+        if ($user->is_approved) {
+            return redirect()->route('admin.users.index')->with('success', 'User is already approved.');
+        }
+
+        $user->update([
+            'is_approved' => true,
+            'approved_at' => now(),
+            'approved_by' => $request->user()?->id,
+        ]);
+
+        $this->notificationService->sendUserApproved($user);
+
+        return redirect()->route('admin.users.index')->with('success', 'User approved successfully.');
     }
 }

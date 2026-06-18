@@ -1,6 +1,5 @@
 @php
     $editMode = $editMode ?? false;
-    $isTenant = auth()->user()?->hasRole(\App\Models\User::ROLE_TENANT) ?? false;
     $technicianMode = $technicianMode ?? false;
 @endphp
 
@@ -105,12 +104,12 @@
 </div>
 
 <div style="margin-bottom: 1rem;">
-    <label for="description">Fault Description</label>
+    <label for="description">Description</label>
     <textarea id="description" name="description" required>{{ old('description', $ticket->description ?? '') }}</textarea>
 </div>
 
 <div class="card" style="margin-bottom: 1rem;">
-    <h3 style="margin-top: 0;">Fault Attachments</h3>
+    <h3 style="margin-top: 0;">Attachments</h3>
 
     <div style="margin-bottom: 0.8rem;">
         <label for="image_attachments">Upload Pictures</label>

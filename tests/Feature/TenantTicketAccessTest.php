@@ -121,13 +121,39 @@ class TenantTicketAccessTest extends TestCase
                 'assigned_to' => $technician->id,
                 'priority' => 'high',
             ])
-            ->assertRedirect(route('tickets.index'));
+            ->assertForbidden();
 
-        $ticket = Ticket::query()->latest('id')->firstOrFail();
+        $this->assertDatabaseCount('tickets', 0);
+    }
 
-        $this->assertSame($tenant->id, $ticket->reported_by);
-        $this->assertNull($ticket->assigned_to);
-        $this->assertSame('logged', $ticket->status);
+    public function test_tenant_does_not_see_create_ticket_button(): void
+    {
+        $tenant = User::create([
+            'name' => 'Tenant User',
+            'email' => 'tenant.nav@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_TENANT,
+        ]);
+
+        $response = $this->actingAs($tenant)->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Create Ticket');
+        $response->assertDontSeeText('Log Ticket');
+    }
+
+    public function test_tenant_cannot_access_ticket_create_page(): void
+    {
+        $tenant = User::create([
+            'name' => 'Tenant User',
+            'email' => 'tenant.create.page@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_TENANT,
+        ]);
+
+        $this->actingAs($tenant)
+            ->get(route('tickets.create'))
+            ->assertForbidden();
     }
 
     public function test_tenant_cannot_access_ticket_edit_or_update_routes(): void

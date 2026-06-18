@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function (): void {
 	Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 	Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+	Route::get('/signup', [AuthController::class, 'showSignupForm'])->name('signup.show');
+	Route::post('/signup', [AuthController::class, 'signup'])->name('signup');
 });
 
 Route::middleware('auth')->group(function (): void {
@@ -36,10 +38,14 @@ Route::middleware('auth')->group(function (): void {
 		Route::resource('properties', AdminPropertyController::class)->except(['show']);
 		Route::resource('categories', AdminCategoryController::class)->except(['show']);
 		Route::resource('users', AdminUserController::class)->except(['show']);
-		Route::get('settings', [AdminSettingsController::class, 'edit'])->name('settings.edit');
-		Route::put('settings', [AdminSettingsController::class, 'update'])->name('settings.update');
-		Route::post('settings/test-smtp', [AdminSettingsController::class, 'testSmtp'])->name('settings.test-smtp');
-		Route::post('settings/test-sms', [AdminSettingsController::class, 'testSms'])->name('settings.test-sms');
-		Route::post('settings/reset-data', [AdminSettingsController::class, 'resetData'])->name('settings.reset-data');
+		Route::post('users/{user}/approve', [AdminUserController::class, 'approve'])->name('users.approve');
+
+		Route::middleware('super_admin')->group(function (): void {
+			Route::get('settings', [AdminSettingsController::class, 'edit'])->name('settings.edit');
+			Route::put('settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+			Route::post('settings/test-smtp', [AdminSettingsController::class, 'testSmtp'])->name('settings.test-smtp');
+			Route::post('settings/test-sms', [AdminSettingsController::class, 'testSms'])->name('settings.test-sms');
+			Route::post('settings/reset-data', [AdminSettingsController::class, 'resetData'])->name('settings.reset-data');
+		});
 	});
 });

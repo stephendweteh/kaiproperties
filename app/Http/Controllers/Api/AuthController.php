@@ -7,11 +7,16 @@ use App\Http\Requests\Api\LoginRequest;
 use App\Http\Requests\Api\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    public function __construct(private readonly NotificationService $notificationService)
+    {
+    }
+
     public function register(RegisterRequest $request)
     {
         $validated = $request->validated();
@@ -22,15 +27,17 @@ class AuthController extends Controller
             'password' => $validated['password'],
             'phone' => $validated['phone'] ?? null,
             'role' => $validated['role'] ?? User::ROLE_TENANT,
+            'is_approved' => false,
+            'approved_at' => null,
+            'approved_by' => null,
         ]);
 
-        $token = $user->createToken('mobile-client')->plainTextToken;
+        $this->notificationService->sendSignupPendingApproval($user);
 
         return response()->json([
-            'message' => 'Account created successfully.',
-            'token' => $token,
+            'message' => 'Account created successfully and is pending operations manager approval.',
             'user' => UserResource::make($user),
-        ], 201);
+        ], 202);
     }
 
     public function login(LoginRequest $request)
@@ -43,6 +50,12 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'Invalid login credentials.',
             ], 422);
+        }
+
+        if (! $user->is_approved) {
+            return response()->json([
+                'message' => 'Your account is pending operations manager approval.',
+            ], 403);
         }
 
         $token = $user->createToken('mobile-client')->plainTextToken;

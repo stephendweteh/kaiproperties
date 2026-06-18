@@ -28,7 +28,7 @@ class TicketController extends Controller
         $canApproveTickets = $user ? $this->canApproveTickets($user) : false;
         $canEditTickets = $user ? $this->canEditTickets($user) : false;
         $approverMode = $canApproveTickets && ! $canEditTickets;
-        $canCreateTickets = $isTenant || $canEditTickets;
+        $canCreateTickets = $canEditTickets;
 
         $tickets = Ticket::query()
             ->with([
@@ -82,9 +82,10 @@ class TicketController extends Controller
         $isTenant = $user?->hasRole(User::ROLE_TENANT) ?? false;
         $canCreateTickets = $user ? $this->canEditTickets($user) : false;
 
-        abort_unless($isTenant || $canCreateTickets, 403);
+        abort_unless($canCreateTickets, 403);
 
         return view('tickets.create', [
+            'isTenant' => $isTenant,
             'properties' => Property::where('is_active', true)->orderBy('name')->get(),
             'categories' => MaintenanceCategory::where('is_active', true)->orderBy('name')->get(),
             'priorities' => Ticket::PRIORITIES,
@@ -122,7 +123,7 @@ class TicketController extends Controller
         $user = $request->user();
         $isTenant = $user?->hasRole(User::ROLE_TENANT) ?? false;
 
-        abort_unless($isTenant || ($user && $this->canEditTickets($user)), 403);
+        abort_unless($user && $this->canEditTickets($user), 403);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -153,9 +154,11 @@ class TicketController extends Controller
         ]);
 
         $this->storeAttachments($request, $ticket);
+        $this->notificationService->sendTicketLogged($ticket->fresh(['reporter', 'technician']));
 
-        return redirect()
-            ->route('tickets.index')
+        $redirect = $isTenant ? route('tickets.show', $ticket) : route('tickets.index');
+
+        return redirect($redirect)
             ->with('success', $ticket->status === 'pending_approval'
                 ? 'Ticket created and sent for approval.'
                 : 'Ticket created successfully.');
@@ -320,6 +323,8 @@ class TicketController extends Controller
 
         $ticket->update($validated);
 
+        $this->notificationService->sendTicketStatusChanged($ticket->fresh(['reporter', 'technician']), $previousStatus);
+
         $this->removeSelectedAttachments($request, $ticket);
         $this->storeAttachments($request, $ticket);
 
@@ -352,6 +357,8 @@ class TicketController extends Controller
 
         $ticket->delete();
 
+        $this->notificationService->sendTicketDeleted($ticket);
+
         return redirect()
             ->route('tickets.index')
             ->with('success', 'Ticket deleted successfully.');
@@ -363,6 +370,7 @@ class TicketController extends Controller
         $canApproveTickets = $this->canApproveTickets($user);
         $canEditTickets = $this->canEditTickets($user);
         $expectsJson = $request->expectsJson();
+        $previousStatus = $ticket->status;
 
         abort_unless($canApproveTickets && ! $canEditTickets, 403);
 
@@ -402,6 +410,8 @@ class TicketController extends Controller
         }
 
         $ticket->update(['status' => $newStatus]);
+
+        $this->notificationService->sendTicketStatusChanged($ticket->fresh(['reporter', 'technician']), $previousStatus);
 
         if ($expectsJson) {
             return response()->json([

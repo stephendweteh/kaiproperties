@@ -7,7 +7,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class EnsureAdmin
+class EnsureSuperAdmin
 {
     /**
      * Handle an incoming request.
@@ -18,14 +18,14 @@ class EnsureAdmin
     {
         $user = $request->user();
 
-        if (! $user || ! $user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER])) {
+        if (! $user || ! $user->hasRole(User::ROLE_ADMIN)) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Admin access required.',
+                    'message' => 'Super Admin access required.',
                 ], 403);
             }
 
-            abort(403, 'Admin access required.');
+            abort(403, 'Super Admin access required.');
         }
 
         return $next($request);
