@@ -16,6 +16,7 @@ class SignupApprovalFlowTest extends TestCase
             'name' => 'Pending User',
             'email' => 'pending.user@kai.local',
             'phone' => '233201234999',
+            'role' => User::ROLE_TECHNICIAN,
             'password' => 'password123',
             'password_confirmation' => 'password123',
         ]);
@@ -24,7 +25,7 @@ class SignupApprovalFlowTest extends TestCase
 
         $this->assertDatabaseHas('users', [
             'email' => 'pending.user@kai.local',
-            'role' => User::ROLE_TENANT,
+            'role' => User::ROLE_TECHNICIAN,
             'is_approved' => false,
         ]);
     }

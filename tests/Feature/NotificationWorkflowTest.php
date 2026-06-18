@@ -64,16 +64,54 @@ class NotificationWorkflowTest extends TestCase
             ->assertRedirect(route('admin.users.index'));
     }
 
-    public function test_tenant_ticket_logging_triggers_notifications(): void
+    public function test_web_signup_triggers_pending_approval_notification(): void
     {
         $notificationService = Mockery::mock(NotificationService::class);
         $this->app->instance(NotificationService::class, $notificationService);
 
-        $tenant = User::create([
-            'name' => 'Tenant User',
-            'email' => 'tenant.notify@kai.local',
+        $notificationService->shouldReceive('sendSignupPendingApproval')
+            ->once()
+            ->with(Mockery::on(fn (User $user): bool => $user->email === 'signup.web@kai.local'));
+
+        $this->post(route('signup'), [
+            'name' => 'Signup Web User',
+            'email' => 'signup.web@kai.local',
+            'phone' => '233201234333',
+            'role' => User::ROLE_TECHNICIAN,
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertRedirect(route('login'));
+    }
+
+    public function test_api_signup_triggers_pending_approval_notification(): void
+    {
+        $notificationService = Mockery::mock(NotificationService::class);
+        $this->app->instance(NotificationService::class, $notificationService);
+
+        $notificationService->shouldReceive('sendSignupPendingApproval')
+            ->once()
+            ->with(Mockery::on(fn (User $user): bool => $user->email === 'signup.api@kai.local'));
+
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Signup API User',
+            'email' => 'signup.api@kai.local',
+            'phone' => '233201234444',
+            'role' => User::ROLE_TECHNICIAN,
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertStatus(202);
+    }
+
+    public function test_operations_manager_ticket_logging_triggers_notifications(): void
+    {
+        $notificationService = Mockery::mock(NotificationService::class);
+        $this->app->instance(NotificationService::class, $notificationService);
+
+        $operationsManager = User::create([
+            'name' => 'Operations Manager',
+            'email' => 'ops.notify@kai.local',
             'password' => 'password',
-            'role' => User::ROLE_TENANT,
+            'role' => User::ROLE_OPERATIONS_MANAGER,
         ]);
 
         $property = Property::create([
@@ -95,12 +133,13 @@ class NotificationWorkflowTest extends TestCase
             ->once()
             ->with(Mockery::type(Ticket::class));
 
-        $this->actingAs($tenant)
+        $this->actingAs($operationsManager)
             ->post(route('tickets.store'), [
                 'title' => 'Fault report',
                 'description' => 'Power is off in the unit',
                 'property_id' => $property->id,
                 'maintenance_category_id' => $category->id,
+            'reported_by' => $operationsManager->id,
                 'priority' => 'high',
             ])
             ->assertRedirect();

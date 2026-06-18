@@ -23,7 +23,13 @@ class AuthController extends Controller
 
     public function showSignupForm()
     {
-        return view('auth.signup');
+        return view('auth.signup', [
+            'signupRoles' => [
+                User::ROLE_OPERATIONS_MANAGER,
+                User::ROLE_TECHNICIAN,
+                User::ROLE_APPROVER,
+            ],
+        ]);
     }
 
     public function login(Request $request)
@@ -58,6 +64,7 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:30'],
+            'role' => ['required', 'in:operations_manager,technician,approver'],
             'password' => ['required', 'confirmed', Password::min(8)],
         ]);
 
@@ -66,7 +73,7 @@ class AuthController extends Controller
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
             'password' => $validated['password'],
-            'role' => User::ROLE_TENANT,
+            'role' => $validated['role'],
             'is_approved' => false,
             'approved_at' => null,
             'approved_by' => null,

@@ -52,6 +52,18 @@
                     </div>
 
                     <div class="field-group">
+                        <label for="role">Role</label>
+                        <select id="role" name="role" required>
+                            <option value="">Select role</option>
+                            @foreach(($signupRoles ?? []) as $role)
+                                <option value="{{ $role }}" @selected(old('role') === $role)>
+                                    {{ str($role)->replace('_', ' ')->title() }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="field-group">
                         <label for="password">Password</label>
                         <input id="password" type="password" name="password" placeholder="At least 8 characters" required>
                     </div>
