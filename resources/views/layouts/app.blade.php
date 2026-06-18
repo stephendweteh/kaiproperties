@@ -137,6 +137,32 @@
         </aside>
 
         <main class="page-content page-content-shell">
+            <div class="mobile-app-header" aria-label="Mobile app header">
+                <div class="mobile-app-title-wrap">
+                    <div class="mobile-app-title">{{ $siteName }}</div>
+                    <div class="mobile-app-subtitle">{{ $title ?? 'Dashboard' }}</div>
+                </div>
+                <div class="mobile-header-actions">
+                    <div class="mobile-notification-slot" aria-hidden="true">
+                        <svg class="mobile-bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"></path>
+                            <path d="M10 17a2 2 0 0 0 4 0"></path>
+                        </svg>
+                        <span class="mobile-badge-dot"></span>
+                    </div>
+                    <form method="POST" action="{{ route('logout') }}" class="mobile-logout-form">
+                        @csrf
+                        <button type="submit" class="mobile-logout-btn" aria-label="Logout">
+                            <svg class="mobile-logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M15 17l5-5-5-5"></path>
+                                <path d="M20 12H9"></path>
+                                <path d="M12 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7"></path>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
             <div class="top-user-bar">
                 <a class="top-user-chip" href="{{ route('profile.edit') }}" title="View profile">
                     @if(auth()->user()->profile_photo_path)
