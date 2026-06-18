@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Super Admin Login'])
+@extends('layouts.app', ['title' => 'Kai Property Ltd'])
 
 @section('content')
     @php

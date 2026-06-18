@@ -1,5 +1,5 @@
-const CACHE_NAME = 'kai-properties-v2';
-const APP_SHELL = ['/', '/login', '/signup', '/css/site.css', '/favicon.ico'];
+const CACHE_NAME = 'kai-properties-v4';
+const APP_SHELL = ['/', '/login', '/signup', '/css/site.css', '/favicon.ico', '/kaipwa.png'];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -25,6 +25,25 @@ self.addEventListener('fetch', (event) => {
     const requestUrl = new URL(event.request.url);
 
     if (requestUrl.origin !== self.location.origin) {
+        return;
+    }
+
+    if (
+        requestUrl.pathname === '/manifest.webmanifest' ||
+        requestUrl.pathname.startsWith('/storage/settings/') ||
+        requestUrl.pathname === '/favicon.ico' ||
+        requestUrl.pathname === '/kaipwa.png'
+    ) {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    const copy = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
+
         return;
     }
 

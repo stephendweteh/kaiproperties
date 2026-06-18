@@ -154,7 +154,7 @@ class NotificationWorkflowTest extends TestCase
             'name' => 'Approver User',
             'email' => 'approver.notify@kai.local',
             'password' => 'password',
-            'role' => User::ROLE_APPROVER,
+            'role' => User::ROLE_OPERATIONS_MANAGER,
         ]);
 
         $technician = User::create([

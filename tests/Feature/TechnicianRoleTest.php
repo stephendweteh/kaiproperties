@@ -239,7 +239,7 @@ class TechnicianRoleTest extends TestCase
             'name' => 'Approver User',
             'email' => 'approver.logged.web@kai.local',
             'password' => 'password',
-            'role' => User::ROLE_APPROVER,
+            'role' => User::ROLE_OPERATIONS_MANAGER,
         ]);
 
         $property = Property::create([
@@ -300,7 +300,7 @@ class TechnicianRoleTest extends TestCase
             'name' => 'Approver User',
             'email' => 'approver.button.state@kai.local',
             'password' => 'password',
-            'role' => User::ROLE_APPROVER,
+            'role' => User::ROLE_OPERATIONS_MANAGER,
         ]);
 
         $property = Property::create([

@@ -27,7 +27,7 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::min(8)],
             'phone' => ['required', 'string', 'max:30'],
-            'role' => ['nullable', 'in:tenant,technician'],
+            'role' => ['nullable', 'in:tenant,technician,managing_director,general_manager'],
         ];
     }
 }

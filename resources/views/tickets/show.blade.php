@@ -4,23 +4,27 @@
     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem;">
         <div>
             <h2 style="margin-bottom:0.3rem;">Ticket {{ $ticket->ticket_no }}</h2>
-            <p class="muted" style="margin:0;">Read-only ticket details.</p>
+            <p class="muted" style="margin:0;">{{ $canApproveTickets ? 'Review ticket details, assign a technician, then approve or hold.' : 'Read-only ticket details.' }}</p>
         </div>
 
-        <div class="row-actions">
+        <div class="row-actions" style="display:flex; align-items:flex-end; gap:0.6rem; flex-wrap:wrap;">
             <a class="btn" href="{{ route('tickets.index') }}">Back to Tickets</a>
             @if($canEditTickets)
                 <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">Edit Ticket</a>
             @elseif($canApproveTickets)
-                <form method="POST" action="{{ route('tickets.review', $ticket) }}" style="display:inline;">
+                <form method="POST" action="{{ route('tickets.review', $ticket) }}" style="display:flex; align-items:flex-end; gap:0.45rem; flex-wrap:wrap;">
                     @csrf
-                    <input type="hidden" name="decision" value="approve">
-                    <button type="submit" class="btn btn-alt">Approve</button>
-                </form>
-                <form method="POST" action="{{ route('tickets.review', $ticket) }}" style="display:inline;">
-                    @csrf
-                    <input type="hidden" name="decision" value="hold">
-                    <button type="submit" class="btn btn-danger">Hold</button>
+                    <div style="min-width: 220px;">
+                        <label for="assigned_to" class="muted" style="display:block; margin-bottom:0.25rem;">Assign Technician</label>
+                        <select id="assigned_to" name="assigned_to" required>
+                            <option value="">Select Technician</option>
+                            @foreach(($technicians ?? collect()) as $technician)
+                                <option value="{{ $technician->id }}" @selected((string) old('assigned_to', $ticket->assigned_to ?? '') === (string) $technician->id)>{{ $technician->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button type="submit" name="decision" value="approve" class="btn btn-alt">Approve</button>
+                    <button type="submit" name="decision" value="hold" class="btn btn-danger">Hold</button>
                 </form>
             @elseif($canTechnicianUpdate ?? false)
                 <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">Update Status</a>

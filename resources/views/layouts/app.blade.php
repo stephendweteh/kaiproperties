@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     @php
         $pwaSiteName = \App\Models\Setting::valueFor('site_name', 'Kai Properties');
-        $pwaLogoPath = \App\Models\Setting::valueFor('logo_path');
-        $pwaIcon = $pwaLogoPath ? asset('storage/'.$pwaLogoPath) : asset('favicon.ico');
+        $pwaIconVersion = '1';
+        $pwaIcon = asset('kaipwa.png');
     @endphp
     <title>{{ $title ?? 'Kai Properties - Maintenance' }}</title>
     <meta name="application-name" content="{{ $pwaSiteName }}">
@@ -14,9 +14,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0c1f3f">
-    <link rel="manifest" href="{{ route('pwa.manifest') }}">
-    <link id="app-favicon" rel="icon" href="{{ $pwaIcon }}">
-    <link rel="apple-touch-icon" href="{{ $pwaIcon }}">
+    <link rel="manifest" href="{{ route('pwa.manifest', ['v' => $pwaIconVersion]) }}">
+    <link id="app-favicon" rel="icon" href="{{ $pwaIcon }}?v={{ $pwaIconVersion }}">
+    <link rel="apple-touch-icon" href="{{ $pwaIcon }}?v={{ $pwaIconVersion }}">
     <link rel="stylesheet" href="{{ asset('css/site.css') }}">
 </head>
 <body>
@@ -58,6 +58,8 @@
                 @if(auth()->user()->hasRole([
                     \App\Models\User::ROLE_ADMIN,
                     \App\Models\User::ROLE_OPERATIONS_MANAGER,
+                    \App\Models\User::ROLE_MANAGING_DIRECTOR,
+                    \App\Models\User::ROLE_GENERAL_MANAGER,
                 ]))
                     <a class="{{ request()->routeIs('tickets.create') ? 'active' : '' }}" href="{{ route('tickets.create') }}">
                         <span class="nav-link-inner">

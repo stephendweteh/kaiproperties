@@ -1,13 +1,13 @@
-@extends('layouts.app', ['title' => ($approverMode ?? false) ? 'Approve Ticket' : 'Edit Ticket'])
+@extends('layouts.app', ['title' => ($reviewMode ?? false) ? 'Approve Ticket' : 'Edit Ticket'])
 
 @section('content')
-    <h2>{{ ($approverMode ?? false) ? 'Approve Ticket' : 'Edit Ticket' }} {{ $ticket->ticket_no }}</h2>
+    <h2>{{ ($reviewMode ?? false) ? 'Approve Ticket' : 'Edit Ticket' }} {{ $ticket->ticket_no }}</h2>
 
     <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="card" enctype="multipart/form-data">
         @csrf
         @method('PUT')
 
-        @if($approverMode ?? false)
+        @if($reviewMode ?? false)
             <div class="form-grid">
                 <div>
                     <label>Title</label>
@@ -94,6 +94,6 @@
             @include('tickets.partials.form-fields', ['editMode' => true])
         @endif
 
-        <button type="submit">{{ ($approverMode ?? false) ? 'Submit Decision' : (($technicianMode ?? false) ? 'Update Status' : 'Update Ticket') }}</button>
+        <button type="submit">{{ ($reviewMode ?? false) ? 'Submit Decision' : (($technicianMode ?? false) ? 'Update Status' : 'Update Ticket') }}</button>
     </form>
 @endsection

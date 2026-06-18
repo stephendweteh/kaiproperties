@@ -11,16 +11,8 @@ class PwaController extends Controller
     public function manifest(): JsonResponse
     {
         $siteName = Setting::valueFor('site_name', 'Kai Properties');
-        $logoPath = Setting::valueFor('logo_path');
-        $logoUrl = $logoPath ? asset('storage/'.$logoPath) : asset('favicon.ico');
-        $extension = strtolower(pathinfo((string) $logoPath, PATHINFO_EXTENSION));
-        $iconType = match ($extension) {
-            'jpg', 'jpeg' => 'image/jpeg',
-            'webp' => 'image/webp',
-            'svg' => 'image/svg+xml',
-            'ico' => 'image/x-icon',
-            default => 'image/png',
-        };
+        $iconUrl = asset('kaipwa.png').'?v=1';
+        $iconType = 'image/png';
 
         $manifest = [
             'name' => $siteName.' Maintenance',
@@ -34,7 +26,13 @@ class PwaController extends Controller
             'theme_color' => '#0c1f3f',
             'icons' => [
                 [
-                    'src' => $logoUrl,
+                    'src' => $iconUrl,
+                    'sizes' => '192x192',
+                    'type' => $iconType,
+                    'purpose' => 'any',
+                ],
+                [
+                    'src' => $iconUrl,
                     'sizes' => '512x512',
                     'type' => $iconType,
                     'purpose' => 'any maskable',

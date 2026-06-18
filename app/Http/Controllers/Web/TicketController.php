@@ -23,12 +23,12 @@ class TicketController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $isTenant = $user?->hasRole(User::ROLE_TENANT) ?? false;
+        $isReporterScopedRole = $user ? $this->isReporterScopedRole($user) : false;
         $isTechnician = $user?->hasRole(User::ROLE_TECHNICIAN) ?? false;
         $canApproveTickets = $user ? $this->canApproveTickets($user) : false;
         $canEditTickets = $user ? $this->canEditTickets($user) : false;
-        $approverMode = $canApproveTickets && ! $canEditTickets;
-        $canCreateTickets = $canEditTickets;
+        $reviewMode = $canApproveTickets && ! $canEditTickets;
+        $canCreateTickets = $user ? $this->canCreateTickets($user) : false;
 
         $tickets = Ticket::query()
             ->with([
@@ -38,7 +38,7 @@ class TicketController extends Controller
                 'technician:id,name',
                 'attachments:id,ticket_id,file_path,file_name,attachment_type',
             ])
-            ->when($isTenant, fn (Builder $builder) => $builder->where('reported_by', $request->user()->id))
+            ->when($isReporterScopedRole, fn (Builder $builder) => $builder->where('reported_by', $request->user()->id))
             ->when($isTechnician, fn (Builder $builder) => $builder
                 ->where('assigned_to', $request->user()->id)
                 ->whereIn('status', $this->technicianVisibleStatuses()))
@@ -69,8 +69,8 @@ class TicketController extends Controller
             'canApproveTickets' => $canApproveTickets,
             'canEditTickets' => $canEditTickets,
             'canCreateTickets' => $canCreateTickets,
-            'approverMode' => $approverMode,
-            'technicians' => ($isTenant || $isTechnician)
+            'reviewMode' => $reviewMode,
+            'technicians' => ($isReporterScopedRole || $isTechnician)
                 ? collect()
                 : User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
         ]);
@@ -79,8 +79,8 @@ class TicketController extends Controller
     public function create()
     {
         $user = request()->user();
-        $isTenant = $user?->hasRole(User::ROLE_TENANT) ?? false;
-        $canCreateTickets = $user ? $this->canEditTickets($user) : false;
+        $isTenant = $user ? $this->isReporterScopedRole($user) : false;
+        $canCreateTickets = $user ? $this->canCreateTickets($user) : false;
 
         abort_unless($canCreateTickets, 403);
 
@@ -99,6 +99,7 @@ class TicketController extends Controller
     public function show(Ticket $ticket)
     {
         $user = request()->user();
+        $canApproveTickets = $this->canApproveTickets($user);
 
         abort_unless($this->canViewTicket($user, $ticket), 403);
 
@@ -113,17 +114,20 @@ class TicketController extends Controller
         return view('tickets.show', [
             'ticket' => $ticket,
             'canEditTickets' => $this->canEditTickets($user),
-            'canApproveTickets' => $this->canApproveTickets($user),
+            'canApproveTickets' => $canApproveTickets,
             'canTechnicianUpdate' => $this->canTechnicianUpdateStatus($user, $ticket),
+            'technicians' => $canApproveTickets
+                ? User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get()
+                : collect(),
         ]);
     }
 
     public function store(Request $request)
     {
         $user = $request->user();
-        $isTenant = $user?->hasRole(User::ROLE_TENANT) ?? false;
+        $isTenant = $user ? $this->isReporterScopedRole($user) : false;
 
-        abort_unless($user && $this->canEditTickets($user), 403);
+        abort_unless($user && $this->canCreateTickets($user), 403);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -148,9 +152,11 @@ class TicketController extends Controller
             $validated['assigned_to'] = null;
         }
 
+        $status = $this->mustGoThroughOperationsApproval($user) ? 'pending_approval' : 'logged';
+
         $ticket = Ticket::create([
             ...$validated,
-            'status' => $user?->hasRole(User::ROLE_OPERATIONS_MANAGER) ? 'pending_approval' : 'logged',
+            'status' => $status,
         ]);
 
         $this->storeAttachments($request, $ticket);
@@ -159,7 +165,7 @@ class TicketController extends Controller
         $redirect = $isTenant ? route('tickets.show', $ticket) : route('tickets.index');
 
         return redirect($redirect)
-            ->with('success', $ticket->status === 'pending_approval'
+            ->with('success', $status === 'pending_approval'
                 ? 'Ticket created and sent for approval.'
                 : 'Ticket created successfully.');
     }
@@ -171,7 +177,7 @@ class TicketController extends Controller
 
         abort_unless($this->canEditTickets($user) || $this->canApproveTickets($user) || $technicianMode, 403);
 
-        $approverMode = $this->canApproveTickets($user) && ! $this->canEditTickets($user);
+        $reviewMode = $this->canApproveTickets($user) && ! $this->canEditTickets($user);
 
         $ticket->load(['reporter:id,name', 'technician:id,name', 'attachments.uploader:id,name']);
 
@@ -182,7 +188,7 @@ class TicketController extends Controller
             'priorities' => Ticket::PRIORITIES,
             'statuses' => $technicianMode ? ['in_progress', 'completed'] : Ticket::STATUSES,
             'technicianMode' => $technicianMode,
-            'approverMode' => $approverMode,
+            'reviewMode' => $reviewMode,
             'technicians' => User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
         ]);
     }
@@ -247,8 +253,8 @@ class TicketController extends Controller
                 }
             }
 
-            if (in_array($validated['status'], $this->technicianVisibleStatuses(), true) && $assignedTo === 0) {
-                return back()->withErrors(['assigned_to' => 'Assign a technician before moving the ticket to this status.'])->withInput();
+            if ($assignedTo === 0) {
+                return back()->withErrors(['assigned_to' => 'Assign a technician before approving or placing this ticket on hold.'])->withInput();
             }
 
             $attributes = [
@@ -371,47 +377,61 @@ class TicketController extends Controller
         $canEditTickets = $this->canEditTickets($user);
         $expectsJson = $request->expectsJson();
         $previousStatus = $ticket->status;
+        $previousAssignedTo = (int) ($ticket->assigned_to ?? 0);
 
         abort_unless($canApproveTickets && ! $canEditTickets, 403);
 
         $validated = $request->validate([
+            'assigned_to' => ['nullable', 'exists:users,id'],
             'decision' => ['required', 'in:approve,hold'],
         ]);
 
-        if ($validated['decision'] === 'approve' && empty($ticket->assigned_to)) {
+        $assignedTo = ! empty($validated['assigned_to'])
+            ? (int) $validated['assigned_to']
+            : (int) ($ticket->assigned_to ?? 0);
+
+        if ($assignedTo > 0) {
+            $technician = User::where('id', $assignedTo)
+                ->where('role', User::ROLE_TECHNICIAN)
+                ->first();
+
+            if (! $technician) {
+                if ($expectsJson) {
+                    return response()->json([
+                        'message' => 'Selected user is not a technician.',
+                    ], 422);
+                }
+
+                return back()->withErrors(['assigned_to' => 'Selected user is not a technician.'])->withInput();
+            }
+        }
+
+        if ($assignedTo === 0) {
             if ($expectsJson) {
                 return response()->json([
-                    'message' => 'Assign a technician before approving this ticket.',
+                    'message' => 'Assign a technician before approving or placing this ticket on hold.',
                 ], 422);
             }
 
-            return back()->withErrors(['decision' => 'Assign a technician before approving this ticket.']);
+            return back()->withErrors(['decision' => 'Assign a technician before approving or placing this ticket on hold.'])->withInput();
         }
 
         $newStatus = $validated['decision'] === 'approve' ? 'logged' : 'on_hold';
 
-        if ($ticket->status === $newStatus) {
-            if ($expectsJson) {
-                return response()->json([
-                    'message' => 'Ticket review action applied.',
-                    'data' => [
-                        'ticket_id' => $ticket->id,
-                        'status' => $ticket->status,
-                        'status_label' => $ticket->status === 'logged'
-                            ? 'Logged/New'
-                            : str($ticket->status)->replace('_', ' ')->title()->toString(),
-                    ],
-                ]);
-            }
+        $ticket->update([
+            'assigned_to' => $assignedTo,
+            'status' => $newStatus,
+        ]);
 
-            return redirect()
-                ->route('tickets.show', $ticket)
-                ->with('success', 'Ticket review action applied.');
+        $ticket->refresh();
+
+        if ((int) ($ticket->assigned_to ?? 0) !== $previousAssignedTo) {
+            $this->notificationService->sendTicketAssigned($ticket);
         }
 
-        $ticket->update(['status' => $newStatus]);
-
-        $this->notificationService->sendTicketStatusChanged($ticket->fresh(['reporter', 'technician']), $previousStatus);
+        if ($previousStatus !== $ticket->status) {
+            $this->notificationService->sendTicketStatusChanged($ticket->fresh(['reporter', 'technician']), $previousStatus);
+        }
 
         if ($expectsJson) {
             return response()->json([
@@ -494,12 +514,39 @@ class TicketController extends Controller
 
     private function canApproveTickets(?User $user): bool
     {
-        return (bool) $user?->hasRole(User::ROLE_APPROVER);
+        return (bool) $user?->hasRole(User::ROLE_OPERATIONS_MANAGER);
     }
 
     private function canEditTickets(?User $user): bool
     {
-        return (bool) $user?->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER]);
+        return (bool) $user?->hasRole(User::ROLE_ADMIN);
+    }
+
+    private function canCreateTickets(?User $user): bool
+    {
+        return (bool) $user?->hasRole([
+            User::ROLE_ADMIN,
+            User::ROLE_OPERATIONS_MANAGER,
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
+    }
+
+    private function isReporterScopedRole(?User $user): bool
+    {
+        return (bool) $user?->hasRole([
+            User::ROLE_TENANT,
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
+    }
+
+    private function mustGoThroughOperationsApproval(?User $user): bool
+    {
+        return (bool) $user?->hasRole([
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
     }
 
     private function canViewTicket(?User $user, Ticket $ticket): bool
@@ -508,7 +555,7 @@ class TicketController extends Controller
             return true;
         }
 
-        if ($user?->hasRole(User::ROLE_TENANT) && (int) $ticket->reported_by === (int) $user->id) {
+        if ($this->isReporterScopedRole($user) && (int) $ticket->reported_by === (int) $user->id) {
             return true;
         }
 

@@ -55,7 +55,14 @@ class UserController extends Controller
     public function create()
     {
         return view('admin.users.create', [
-            'roles' => [User::ROLE_TENANT, User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER, User::ROLE_TECHNICIAN, User::ROLE_APPROVER],
+            'roles' => [
+                User::ROLE_TENANT,
+                User::ROLE_ADMIN,
+                User::ROLE_OPERATIONS_MANAGER,
+                User::ROLE_MANAGING_DIRECTOR,
+                User::ROLE_GENERAL_MANAGER,
+                User::ROLE_TECHNICIAN,
+            ],
         ]);
     }
 
@@ -68,7 +75,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:30'],
-            'role' => ['required', 'in:tenant,admin,operations_manager,technician,approver'],
+            'role' => ['required', 'in:tenant,admin,operations_manager,managing_director,general_manager,technician'],
             'password' => ['required', Password::min(8)],
             'profile_photo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
@@ -99,7 +106,14 @@ class UserController extends Controller
     {
         return view('admin.users.edit', [
             'user' => $user,
-            'roles' => [User::ROLE_TENANT, User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER, User::ROLE_TECHNICIAN, User::ROLE_APPROVER],
+            'roles' => [
+                User::ROLE_TENANT,
+                User::ROLE_ADMIN,
+                User::ROLE_OPERATIONS_MANAGER,
+                User::ROLE_MANAGING_DIRECTOR,
+                User::ROLE_GENERAL_MANAGER,
+                User::ROLE_TECHNICIAN,
+            ],
         ]);
     }
 
@@ -112,7 +126,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:30'],
-            'role' => ['required', 'in:tenant,admin,operations_manager,technician,approver'],
+            'role' => ['required', 'in:tenant,admin,operations_manager,managing_director,general_manager,technician'],
             'password' => ['nullable', Password::min(8)],
             'profile_photo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'remove_profile_photo' => ['nullable', 'boolean'],

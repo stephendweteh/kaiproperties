@@ -26,11 +26,19 @@ class DatabaseSeeder extends Seeder
         ]);
 
         User::query()->create([
-            'name' => 'Operations Approver',
-            'email' => 'approver@kai.local',
+            'name' => 'Managing Director',
+            'email' => 'md@kai.local',
             'password' => 'password',
-            'role' => User::ROLE_APPROVER,
+            'role' => User::ROLE_MANAGING_DIRECTOR,
             'phone' => '08000000002',
+        ]);
+
+        User::query()->create([
+            'name' => 'General Manager',
+            'email' => 'gm@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_GENERAL_MANAGER,
+            'phone' => '08000000007',
         ]);
 
         User::query()->create([

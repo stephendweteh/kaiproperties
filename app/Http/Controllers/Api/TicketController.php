@@ -26,6 +26,7 @@ class TicketController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        $isReporterScopedRole = $this->isReporterScopedRole($user);
 
         $query = Ticket::query()
             ->with(['property', 'category', 'reporter:id,name,email', 'technician:id,name,email'])
@@ -45,7 +46,7 @@ class TicketController extends Controller
             })
             ->latest();
 
-        if ($user->hasRole(User::ROLE_TENANT)) {
+        if ($isReporterScopedRole) {
             $query->where('reported_by', $user->id);
         }
 
@@ -61,19 +62,26 @@ class TicketController extends Controller
 
     public function store(TicketStoreRequest $request)
     {
+        if (! $this->canCreateTickets($request->user())) {
+            return response()->json(['message' => 'You do not have permission to log tickets.'], 403);
+        }
+
         $validated = $request->validated();
+        $status = $this->mustGoThroughOperationsApproval($request->user()) ? 'pending_approval' : 'logged';
 
         $ticket = Ticket::create([
             ...$validated,
             'reported_by' => $request->user()->id,
-            'status' => 'pending_approval',
+            'status' => $status,
             'priority' => $validated['priority'] ?? 'medium',
         ]);
 
         $this->notificationService->sendTicketLogged($ticket->fresh(['reporter', 'technician']));
 
         return response()->json([
-            'message' => 'Ticket created and sent for approval.',
+            'message' => $status === 'pending_approval'
+                ? 'Ticket created and sent for approval.'
+                : 'Ticket created successfully.',
             'data' => TicketResource::make($ticket->load(['property', 'category', 'reporter'])),
         ], 201);
     }
@@ -98,7 +106,7 @@ class TicketController extends Controller
     {
         $user = $request->user();
 
-        if (! $user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER, User::ROLE_APPROVER])) {
+        if (! $user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER])) {
             return response()->json(['message' => 'You do not have permission to approve or assign tickets.'], 403);
         }
 
@@ -143,6 +151,14 @@ class TicketController extends Controller
 
         if ($user->hasRole(User::ROLE_TENANT)) {
             return response()->json(['message' => 'Tenants cannot change ticket status.'], 403);
+        }
+
+        if (
+            $user->hasRole(User::ROLE_OPERATIONS_MANAGER)
+            && in_array($request->string('status')->toString(), ['logged', 'on_hold'], true)
+            && empty($ticket->assigned_to)
+        ) {
+            return response()->json(['message' => 'Assign a technician before approving or placing this ticket on hold.'], 422);
         }
 
         $validated = $request->validated();
@@ -212,8 +228,8 @@ class TicketController extends Controller
     {
         $user = $request->user();
 
-        if (! $user->hasRole([User::ROLE_APPROVER, User::ROLE_OPERATIONS_MANAGER, User::ROLE_ADMIN])) {
-            return response()->json(['message' => 'Only approvers, operations managers, or admins can review cost requests.'], 403);
+        if (! $user->hasRole([User::ROLE_OPERATIONS_MANAGER, User::ROLE_ADMIN])) {
+            return response()->json(['message' => 'Only operations managers or admins can review cost requests.'], 403);
         }
 
         $validated = $request->validated();
@@ -244,7 +260,7 @@ class TicketController extends Controller
 
     private function authorizeTicketAccess(User $user, Ticket $ticket): void
     {
-        if ($user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER, User::ROLE_APPROVER])) {
+        if ($user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER])) {
             return;
         }
 
@@ -256,7 +272,7 @@ class TicketController extends Controller
             return;
         }
 
-        if ($user->hasRole(User::ROLE_TENANT) && (int) $ticket->reported_by === (int) $user->id) {
+        if ($this->isReporterScopedRole($user) && (int) $ticket->reported_by === (int) $user->id) {
             return;
         }
 
@@ -266,5 +282,33 @@ class TicketController extends Controller
     private function technicianVisibleStatuses(): array
     {
         return ['assigned', 'in_progress', 'on_hold', 'completed', 'closed', 'overdue'];
+    }
+
+    private function isReporterScopedRole(User $user): bool
+    {
+        return $user->hasRole([
+            User::ROLE_TENANT,
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
+    }
+
+    private function mustGoThroughOperationsApproval(User $user): bool
+    {
+        return $user->hasRole([
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
+    }
+
+    private function canCreateTickets(User $user): bool
+    {
+        return $user->hasRole([
+            User::ROLE_TENANT,
+            User::ROLE_ADMIN,
+            User::ROLE_OPERATIONS_MANAGER,
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
     }
 }

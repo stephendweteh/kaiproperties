@@ -23,8 +23,9 @@ class User extends Authenticatable
     public const ROLE_TENANT = 'tenant';
     public const ROLE_ADMIN = 'admin';
     public const ROLE_OPERATIONS_MANAGER = 'operations_manager';
+    public const ROLE_MANAGING_DIRECTOR = 'managing_director';
+    public const ROLE_GENERAL_MANAGER = 'general_manager';
     public const ROLE_TECHNICIAN = 'technician';
-    public const ROLE_APPROVER = 'approver';
 
     /**
      * Get the attributes that should be cast.

@@ -148,7 +148,7 @@
                             @else
                                 <button type="button" class="btn btn-alt" disabled title="Status update disabled while ticket is on hold.">Update Status</button>
                             @endif
-                        @elseif($approverMode ?? false)
+                        @elseif($reviewMode ?? false)
                             <a class="btn btn-alt" href="{{ route('tickets.show', $ticket) }}">View</a>
                         @elseif($canApproveTickets)
                             <a class="btn btn-alt" href="{{ route('tickets.show', $ticket) }}">View</a>

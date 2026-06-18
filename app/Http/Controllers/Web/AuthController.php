@@ -26,8 +26,9 @@ class AuthController extends Controller
         return view('auth.signup', [
             'signupRoles' => [
                 User::ROLE_OPERATIONS_MANAGER,
+                User::ROLE_MANAGING_DIRECTOR,
+                User::ROLE_GENERAL_MANAGER,
                 User::ROLE_TECHNICIAN,
-                User::ROLE_APPROVER,
             ],
         ]);
     }
@@ -64,7 +65,7 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:30'],
-            'role' => ['required', 'in:operations_manager,technician,approver'],
+            'role' => ['required', 'in:operations_manager,managing_director,general_manager,technician'],
             'password' => ['required', 'confirmed', Password::min(8)],
         ]);
 
