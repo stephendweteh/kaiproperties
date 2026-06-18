@@ -47,8 +47,8 @@
                     </div>
 
                     <div class="field-group">
-                        <label for="phone">Phone (optional)</label>
-                        <input id="phone" type="text" name="phone" value="{{ old('phone') }}" placeholder="+233...">
+                        <label for="phone">Phone Number</label>
+                        <input id="phone" type="text" name="phone" value="{{ old('phone') }}" placeholder="+233..." required>
                     </div>
 
                     <div class="field-group">

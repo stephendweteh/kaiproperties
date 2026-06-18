@@ -68,6 +68,24 @@ class SignupApprovalFlowTest extends TestCase
         ])->assertRedirect(route('dashboard'));
     }
 
+    public function test_guest_signup_requires_phone_number(): void
+    {
+        $response = $this->from(route('signup.show'))->post(route('signup'), [
+            'name' => 'Pending User',
+            'email' => 'missing.phone@kai.local',
+            'role' => User::ROLE_TECHNICIAN,
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ]);
+
+        $response->assertRedirect(route('signup.show'));
+        $response->assertSessionHasErrors('phone');
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'missing.phone@kai.local',
+        ]);
+    }
+
     public function test_operations_manager_has_admin_access_except_settings(): void
     {
         $operationsManager = User::create([

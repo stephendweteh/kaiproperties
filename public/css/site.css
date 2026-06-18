@@ -332,6 +332,16 @@ body {
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.16s ease;
+}
+
+.pwa-loading-overlay.is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .pwa-loading-card {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kai-properties-v1';
+const CACHE_NAME = 'kai-properties-v2';
 const APP_SHELL = ['/', '/login', '/signup', '/css/site.css', '/favicon.ico'];
 
 self.addEventListener('install', (event) => {

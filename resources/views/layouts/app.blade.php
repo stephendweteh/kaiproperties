@@ -234,7 +234,7 @@
     </main>
 @endauth
 
-<div class="pwa-loading-overlay" data-pwa-loading hidden>
+<div class="pwa-loading-overlay" data-pwa-loading style="display:none;">
     <div class="pwa-loading-card" role="status" aria-live="polite" aria-label="Loading">
         <img src="{{ $pwaIcon }}" alt="{{ $pwaSiteName }}" class="pwa-loading-logo">
         <div class="pwa-loading-text">Please Wait...</div>
@@ -299,7 +299,8 @@
         let overlayTimer = null;
 
         const hideOverlay = function () {
-            overlay.hidden = true;
+            overlay.classList.remove('is-active');
+            overlay.style.display = 'none';
 
             if (overlayTimer) {
                 window.clearTimeout(overlayTimer);
@@ -308,7 +309,8 @@
         };
 
         const showOverlay = function () {
-            overlay.hidden = false;
+            overlay.classList.add('is-active');
+            overlay.style.display = 'flex';
 
             if (overlayTimer) {
                 window.clearTimeout(overlayTimer);
