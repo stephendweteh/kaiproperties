@@ -22,6 +22,7 @@ body {
     background: linear-gradient(135deg, #eaf0f9 0%, #f0f4fd 100%);
 }
 
+
 .container {
     width: min(1100px, 92%);
     margin: 0 auto;
@@ -145,7 +146,27 @@ body {
 .top-user-bar {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
+    gap: 0.55rem;
     margin-bottom: 0.8rem;
+}
+
+.top-install-btn {
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 0.38rem 0.8rem;
+    width: auto;
+    min-height: 36px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    box-shadow: 0 6px 14px rgba(12, 31, 63, 0.08);
+}
+
+.top-install-btn:hover {
+    background: #f0f6ff;
+    opacity: 1;
 }
 
 .top-user-chip {
@@ -280,6 +301,72 @@ body {
     width: 16px;
     height: 16px;
 }
+
+.mobile-install-btn {
+    width: auto;
+    min-height: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: #1a4f8a;
+    padding: 0 0.7rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(12, 31, 63, 0.08);
+}
+
+.mobile-install-btn:hover {
+    background: #f1f5f9;
+    opacity: 1;
+}
+
+/* Loading overlay */
+.pwa-loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 250;
+    background: rgba(12, 31, 63, 0.28);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.pwa-loading-card {
+    width: min(300px, 100%);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    box-shadow: 0 16px 38px rgba(12, 31, 63, 0.24);
+    padding: 1rem 0.95rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+}
+
+.pwa-loading-logo {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    animation: pwa-loading-pulse 1s ease-in-out infinite;
+}
+
+.pwa-loading-text {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0d1f3c;
+}
+
+@keyframes pwa-loading-pulse {
+    0% { transform: scale(0.94); opacity: 0.84; }
+    50% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.94); opacity: 0.84; }
+}
+
 
 /* Grid and cards */
 .grid {

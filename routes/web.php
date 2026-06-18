@@ -6,9 +6,12 @@ use App\Http\Controllers\Web\Admin\SettingsController as AdminSettingsController
 use App\Http\Controllers\Web\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\PwaController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\TicketController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
 
 Route::middleware('guest')->group(function (): void {
 	Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');

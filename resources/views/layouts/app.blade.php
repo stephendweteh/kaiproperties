@@ -3,7 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @php
+        $pwaSiteName = \App\Models\Setting::valueFor('site_name', 'Kai Properties');
+        $pwaLogoPath = \App\Models\Setting::valueFor('logo_path');
+        $pwaIcon = $pwaLogoPath ? asset('storage/'.$pwaLogoPath) : asset('favicon.ico');
+    @endphp
     <title>{{ $title ?? 'Kai Properties - Maintenance' }}</title>
+    <meta name="application-name" content="{{ $pwaSiteName }}">
+    <meta name="apple-mobile-web-app-title" content="{{ $pwaSiteName }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0c1f3f">
+    <link rel="manifest" href="{{ route('pwa.manifest') }}">
+    <link id="app-favicon" rel="icon" href="{{ $pwaIcon }}">
+    <link rel="apple-touch-icon" href="{{ $pwaIcon }}">
     <link rel="stylesheet" href="{{ asset('css/site.css') }}">
 </head>
 <body>
@@ -143,6 +156,7 @@
                     <div class="mobile-app-subtitle">{{ $title ?? 'Dashboard' }}</div>
                 </div>
                 <div class="mobile-header-actions">
+                    <button type="button" class="mobile-install-btn" data-install-app hidden>Install App</button>
                     <div class="mobile-notification-slot" aria-hidden="true">
                         <svg class="mobile-bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"></path>
@@ -164,6 +178,7 @@
             </div>
 
             <div class="top-user-bar">
+                <button type="button" class="top-install-btn" data-install-app hidden>Install App</button>
                 <a class="top-user-chip" href="{{ route('profile.edit') }}" title="View profile">
                     @if(auth()->user()->profile_photo_path)
                         <img src="{{ asset('storage/'.auth()->user()->profile_photo_path) }}" alt="{{ auth()->user()->name }} profile photo" class="top-user-photo">
@@ -218,5 +233,149 @@
         @yield('content')
     </main>
 @endauth
+
+<div class="pwa-loading-overlay" data-pwa-loading hidden>
+    <div class="pwa-loading-card" role="status" aria-live="polite" aria-label="Loading">
+        <img src="{{ $pwaIcon }}" alt="{{ $pwaSiteName }}" class="pwa-loading-logo">
+        <div class="pwa-loading-text">Please Wait...</div>
+    </div>
+</div>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('{{ asset('sw.js') }}').catch(function () {
+                // Service worker registration can fail silently without blocking app usage.
+            });
+        });
+    }
+
+    (function () {
+        let deferredInstallPrompt = null;
+        const installButtons = Array.from(document.querySelectorAll('[data-install-app]'));
+
+        if (installButtons.length === 0) {
+            return;
+        }
+
+        const setInstallButtonsVisible = function (isVisible) {
+            installButtons.forEach(function (button) {
+                button.hidden = !isVisible;
+            });
+        };
+
+        window.addEventListener('beforeinstallprompt', function (event) {
+            event.preventDefault();
+            deferredInstallPrompt = event;
+            setInstallButtonsVisible(true);
+        });
+
+        installButtons.forEach(function (button) {
+            button.addEventListener('click', async function () {
+                if (!deferredInstallPrompt) {
+                    return;
+                }
+
+                deferredInstallPrompt.prompt();
+                await deferredInstallPrompt.userChoice;
+                deferredInstallPrompt = null;
+                setInstallButtonsVisible(false);
+            });
+        });
+
+        window.addEventListener('appinstalled', function () {
+            deferredInstallPrompt = null;
+            setInstallButtonsVisible(false);
+        });
+    })();
+
+    (function () {
+        const overlay = document.querySelector('[data-pwa-loading]');
+
+        if (!overlay) {
+            return;
+        }
+
+        let overlayTimer = null;
+
+        const hideOverlay = function () {
+            overlay.hidden = true;
+
+            if (overlayTimer) {
+                window.clearTimeout(overlayTimer);
+                overlayTimer = null;
+            }
+        };
+
+        const showOverlay = function () {
+            overlay.hidden = false;
+
+            if (overlayTimer) {
+                window.clearTimeout(overlayTimer);
+            }
+
+            overlayTimer = window.setTimeout(hideOverlay, 8000);
+        };
+
+        document.addEventListener('submit', function (event) {
+            if (event.target instanceof HTMLFormElement) {
+                showOverlay();
+            }
+        }, true);
+
+        document.addEventListener('click', function (event) {
+            const target = event.target;
+            const element = target instanceof Element ? target : target?.parentElement;
+
+            if (!(element instanceof Element)) {
+                return;
+            }
+
+            const link = element.closest('a[href]');
+
+            if (!link) {
+                return;
+            }
+
+            if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                return;
+            }
+
+            if (typeof event.button === 'number' && event.button !== 0) {
+                return;
+            }
+
+            if (link.hasAttribute('download') || link.getAttribute('target') === '_blank') {
+                return;
+            }
+
+            const href = link.getAttribute('href') || '';
+
+            if (href.startsWith('#') || href.startsWith('javascript:')) {
+                return;
+            }
+
+            const url = new URL(link.href, window.location.href);
+
+            if (url.origin !== window.location.origin) {
+                return;
+            }
+
+            showOverlay();
+        }, true);
+
+        window.addEventListener('beforeunload', showOverlay);
+        document.addEventListener('DOMContentLoaded', hideOverlay);
+        window.addEventListener('load', hideOverlay);
+        window.addEventListener('pageshow', hideOverlay);
+
+        document.addEventListener('readystatechange', function () {
+            if (document.readyState === 'complete') {
+                hideOverlay();
+            }
+        });
+    })();
+
+</script>
 </body>
 </html>
