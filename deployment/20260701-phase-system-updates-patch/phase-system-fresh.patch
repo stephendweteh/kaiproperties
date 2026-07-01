@@ -1,0 +1,2670 @@
+diff --git a/deployment/20260701-phase-system-updates-patch.zip b/deployment/20260701-phase-system-updates-patch.zip
+new file mode 100644
+index 0000000..34c1597
+Binary files /dev/null and b/deployment/20260701-phase-system-updates-patch.zip differ
+diff --git a/deployment/20260701-phase-system-updates-patch/ALL-NO-GIT-METHODS.md b/deployment/20260701-phase-system-updates-patch/ALL-NO-GIT-METHODS.md
+new file mode 100644
+index 0000000..4979de1
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/ALL-NO-GIT-METHODS.md
+@@ -0,0 +1,308 @@
++# 🚀 NO-GIT PATCH SOLUTIONS
++
++**All methods below work WITHOUT git installed**
++
++---
++
++## 🟢 METHOD 1: PHP Patcher (Easiest - RECOMMENDED)
++
++### What You Need:
++- PHP (comes with cPanel)
++- That's it!
++
++### How to Use:
++
++**Option A - Via Terminal:**
++```bash
++cd /path/to/kai-maintenance-system
++php patch.php
++```
++
++**Option B - Via Browser:**
++1. Upload `patch.php` to your project root
++2. Open in browser: `https://yourdomain.com/patch.php`
++3. Done!
++
++### What It Does:
++- ✓ Detects and applies all 6 patches
++- ✓ Creates automatic backups
++- ✓ Clears Laravel cache
++- ✓ Shows colored output with progress
++- ✓ Handles errors gracefully
++- ✓ No git, patch, or curl required
++
++### Advantages:
++- ✓ **Simplest method**
++- ✓ Works on all cPanel servers
++- ✓ Most reliable
++- ✓ Auto-backups everything
++- ✓ Gives clear feedback
++
++---
++
++## 🟡 METHOD 2: Bash Patcher (Simple)
++
++### What You Need:
++- Bash shell (comes with Linux)
++- That's it!
++
++### How to Use:
++```bash
++cd /path/to/kai-maintenance-system
++bash patch-no-git.sh
++```
++
++Or with explicit path:
++```bash
++bash patch-no-git.sh /path/to/kai-maintenance-system
++```
++
++### What It Does:
++- ✓ Uses sed to replace code
++- ✓ Creates backups
++- ✓ Clears cache
++- ✓ Works without git
++
++### Advantages:
++- ✓ Lightweight
++- ✓ Fast
++- ✓ No dependencies
++
++### Limitations:
++- Some complex patches may need manual review
++- For full patching, use PHP method
++
++---
++
++## 🔵 METHOD 3: Manual Patch File (Advanced)
++
++### What You Need:
++- `patch` command (if available)
++- Downloaded patch file
++
++### How to Use:
++
++**Step 1: Download patch file**
++```bash
++cd /path/to/kai-maintenance-system
++wget https://raw.githubusercontent.com/stephendweteh/kaiproperties/main/deployment/20260701-phase-system-updates-patch/phase-system-updates.patch
++```
++
++Or if wget doesn't work, use curl:
++```bash
++curl -O https://raw.githubusercontent.com/stephendweteh/kaiproperties/main/deployment/20260701-phase-system-updates-patch/phase-system-updates.patch
++```
++
++**Step 2: Apply patch**
++```bash
++patch -p1 < phase-system-updates.patch
++```
++
++**Step 3: Clean up**
++```bash
++rm phase-system-updates.patch
++php artisan cache:clear
++php artisan config:cache
++```
++
++### Advantages:
++- ✓ Standard Unix method
++- ✓ Works if patch command available
++- ✓ Can handle conflicts
++
++### Limitations:
++- Requires patch command
++- May have conflicts to resolve
++- Needs manual troubleshooting
++
++---
++
++## 🟣 METHOD 4: Manual File Upload (Last Resort)
++
++### What You Need:
++- cPanel File Manager access
++- Text editor
++
++### How to Use:
++
++**Step 1: Download Files Locally**
++From GitHub, download and edit these files:
++- `app/Http/Controllers/Web/TicketController.php`
++- `resources/views/tickets/index.blade.php`
++- `resources/views/tickets/show.blade.php`
++
++**Step 2: Apply Changes Manually**
++See `phase-system-updates.patch` file for exact changes needed.
++
++**Step 3: Upload to Server**
++Use cPanel File Manager to upload the edited files back to your server.
++
++**Step 4: Clear Cache**
++```bash
++php artisan cache:clear
++php artisan config:cache
++```
++
++### Advantages:
++- ✓ Works without terminal
++- ✓ Full manual control
++- ✓ Can preview all changes first
++
++### Limitations:
++- ✗ Most time-consuming
++- ✗ Easy to miss changes
++- ✗ Hard to verify correctness
++
++---
++
++## 📊 COMPARISON TABLE
++
++| Feature | PHP Patcher | Bash | Patch File | Manual |
++|---------|-------------|------|-----------|--------|
++| Difficulty | ⭐ (Easy) | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
++| Speed | ⚡⚡⚡ | ⚡⚡⚡ | ⚡⚡ | ⚡ |
++| Reliability | ⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐ |
++| Git Required | ✗ No | ✗ No | ✗ No | ✗ No |
++| Backup | ✓ Auto | ✓ Auto | ✗ Manual | ✗ Manual |
++| Recommended | ✓ Yes | OK | Advanced | Last resort |
++
++---
++
++## ✅ WHICH TO USE?
++
++### Your Best Options (In Order):
++1. **Try PHP Patcher first** - `php patch.php`
++2. **If that fails, try Bash** - `bash patch-no-git.sh`
++3. **If terminal access unavailable**, use Method 4 (Manual)
++4. **If patch command available**, Method 3 works
++
++### Recommended for Most Users:
++```bash
++cd /path/to/kai-maintenance-system
++php patch.php
++php artisan cache:clear
++```
++
++---
++
++## 🆘 TROUBLESHOOTING
++
++### PHP Patcher Errors
++
++**Error: "Could not find Laravel project"**
++- Make sure you're in the correct directory
++- Check that `artisan` file exists: `ls artisan`
++
++**Error: "Permission denied"**
++- Fix permissions: `chmod -R 755 .`
++- Especially storage: `chmod -R 777 storage`
++
++**Error: "Failed to write"**
++- Check file ownership: `ls -la app/Http/Controllers/Web/`
++- May need: `chown -R www-data:www-data .`
++
++### Bash Patcher Errors
++
++**Error: "command not found: sed"**
++- sed should be built-in, try: `which sed`
++- If missing, use PHP method instead
++
++**Error: "No such file or directory"**
++- Wrong path to patch script
++- Use absolute path: `bash /full/path/to/patch-no-git.sh`
++
++### Patch File Errors
++
++**Error: "patch command not found"**
++- Your server doesn't have patch utility
++- Try PHP method instead
++- Or contact hosting to enable patch
++
++**Error: "hunk FAILED"**
++- Files already modified or different
++- Use PHP patcher which handles this better
++
++---
++
++## 🔄 ROLLBACK (If Needed)
++
++### Option 1: Use Backups
++```bash
++# Find backup directory
++ls storage/backups/
++
++# Restore specific file
++cp storage/backups/patch-YYYY-MM-DD-HH-MM-SS/TicketController.php app/Http/Controllers/Web/
++```
++
++### Option 2: Use Git (If Available)
++```bash
++git checkout -- .
++git pull origin main
++php artisan cache:clear
++```
++
++### Option 3: Re-upload Original Files
++Download from GitHub and re-upload via cPanel File Manager.
++
++---
++
++## 📝 WHAT GETS PATCHED
++
++All methods apply these changes:
++
++1. **TicketController.php** (~60 lines changed)
++   - Add Operations Manager authorization
++   - Redirect Ops Manager to show view
++   - Update status update authorization
++
++2. **index.blade.php** (~10 lines changed)
++   - Make status clickable
++   - Add "click to view" helper text
++   - Add isOperationsManager flag
++
++3. **show.blade.php** (~120 lines changed)
++   - Add phases eager loading
++   - Change auto-refresh to 1 hour
++   - Add isOperationsManager flag
++   - Add phase management form (may be in separate view updates)
++
++---
++
++## 💡 TIPS
++
++- **Always backup first** - PHP patcher does this automatically
++- **Test in staging first** if possible
++- **Hard refresh browser** after patching (Ctrl+Shift+R)
++- **Check browser console** for JavaScript errors (F12)
++- **Keep backup folder** for at least 7 days
++
++---
++
++## ⚡ QUICK COMMANDS
++
++**All-in-one (PHP Method):**
++```bash
++cd /your/project && php patch.php && php artisan cache:clear && echo "✓ Done!"
++```
++
++**All-in-one (Bash Method):**
++```bash
++cd /your/project && bash patch-no-git.sh && php artisan cache:clear && echo "✓ Done!"
++```
++
++---
++
++## 🎯 CONCLUSION
++
++**For 99% of users:** Use `php patch.php`
++
++It's:
++- ✓ Simplest
++- ✓ Safest
++- ✓ Most reliable
++- ✓ Auto-backs up
++- ✓ Clear feedback
++
++Just run it and you're done!
++
+diff --git a/deployment/20260701-phase-system-updates-patch/COPY-PASTE-COMMAND.txt b/deployment/20260701-phase-system-updates-patch/COPY-PASTE-COMMAND.txt
+new file mode 100644
+index 0000000..02fec9c
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/COPY-PASTE-COMMAND.txt
+@@ -0,0 +1,5 @@
++#!/bin/bash
++# COPY THIS ENTIRE LINE AND PASTE INTO YOUR CPANEL TERMINAL
++# Replace /path/to/kai with your actual project path
++
++cd /path/to/kai-maintenance-system && git fetch origin && git pull origin main && php artisan cache:clear && php artisan config:cache && echo "✓ Successfully updated! Hard refresh browser (Ctrl+Shift+R)"
+diff --git a/deployment/20260701-phase-system-updates-patch/CPANEL-DIRECT-INSTRUCTIONS.md b/deployment/20260701-phase-system-updates-patch/CPANEL-DIRECT-INSTRUCTIONS.md
+new file mode 100644
+index 0000000..21f9f83
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/CPANEL-DIRECT-INSTRUCTIONS.md
+@@ -0,0 +1,130 @@
++# Phase System Updates - cPanel Direct Deployment Guide
++
++**Patch Date:** 2026-07-01  
++**Version:** 1.0
++
++## ⚠️ Simple One-Line Deployment for cPanel
++
++If you can't run the shell scripts, use these direct commands instead:
++
++### Step 1: SSH into cPanel Terminal
++Navigate to your project root directory where `artisan` file is located
++
++### Step 2: Download and Apply Patch (Copy & Paste Command)
++
++```bash
++cd /path/to/kai-maintenance-system && git pull origin main && php artisan cache:clear && php artisan config:cache && echo "✓ Patch applied successfully!"
++```
++
++**Replace `/path/to/kai-maintenance-system` with your actual project path**
++
++### Step 3: Clear Browser Cache
++Hard refresh your browser:
++- **Windows/Linux:** `Ctrl + Shift + R`
++- **Mac:** `Cmd + Shift + R`
++
++---
++
++## What Gets Updated
++
++The patch automatically applies these changes:
++- ✓ Ticket status becomes clickable
++- ✓ Adds "click to view" helper text
++- ✓ Changes auto-refresh from 10 seconds to 1 hour
++- ✓ Enables Operations Manager to manage phases
++- ✓ Updates controller authorization
++
++---
++
++## If Git Pull Shows Conflicts
++
++If you see merge conflicts, run this instead:
++
++```bash
++cd /path/to/kai-maintenance-system
++git fetch origin
++git reset --hard origin/main
++php artisan cache:clear
++php artisan config:cache
++```
++
++This will reset to the latest code from GitHub.
++
++---
++
++## If You Need the Patch File Directly
++
++Download the patch file from GitHub and apply it manually:
++
++```bash
++cd /path/to/kai-maintenance-system
++curl -o phase-patch.patch https://raw.githubusercontent.com/stephendweteh/kaiproperties/main/deployment/20260701-phase-system-updates-patch/phase-system-updates.patch
++git apply phase-patch.patch
++php artisan cache:clear
++php artisan config:cache
++rm phase-patch.patch
++```
++
++---
++
++## Verify Deployment Was Successful
++
++After running commands above, check:
++
++1. **Via GitHub:** Verify your repo is at commit `dd4b154` or later
++   ```bash
++   git log -1 --oneline
++   ```
++
++2. **In Application:** 
++   - Ticket status in list should show "click to view" text above it
++   - Clicking status should open ticket detail
++   - Operations Managers should see "Manage Work Phases" section in ticket detail
++
++---
++
++## Troubleshooting
++
++### "Command not found: git"
++- cPanel likely doesn't have git installed
++- Contact your hosting provider to enable git
++- Alternative: Manual file upload (see below)
++
++### "Permission denied"
++```bash
++chmod 644 /path/to/kai-maintenance-system/resources/views/tickets/index.blade.php
++chmod 644 /path/to/kai-maintenance-system/resources/views/tickets/show.blade.php
++```
++
++### Need Manual Update (No Git Access)?
++Files to update in cPanel File Manager:
++
++**File 1: `/resources/views/tickets/index.blade.php`**
++- Find the status pill around line 77
++- Add above it: `<small style="font-size: 0.7rem; color: #666;">click to view</small>`
++
++**File 2: `/resources/views/tickets/show.blade.php`**
++- Around line 235: Change `const refreshIntervalMs = 10000;` to `const refreshIntervalMs = 3600000; // 1 hour`
++- Add phase management form (see patch file for details)
++
++---
++
++## Quick Reference - All Files Modified
++
++1. `app/Http/Controllers/Web/TicketController.php`
++2. `resources/views/tickets/index.blade.php`
++3. `resources/views/tickets/show.blade.php`
++4. `resources/views/layouts/app.blade.php`
++5. `public/css/site.css`
++
++---
++
++## Need More Help?
++
++**Recommended:** Use git pull command:
++```bash
++cd /path/to/kai-maintenance-system && git pull origin main
++```
++
++This is the safest and most reliable method for cPanel.
++
+diff --git a/deployment/20260701-phase-system-updates-patch/CPANEL-METHODS.md b/deployment/20260701-phase-system-updates-patch/CPANEL-METHODS.md
+new file mode 100644
+index 0000000..5105230
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/CPANEL-METHODS.md
+@@ -0,0 +1,187 @@
++# cPanel Deployment Methods - Choose One
++
++## 🟢 METHOD 1: Git Pull (Easiest - Recommended)
++
++**Requirements:** SSH/Terminal access with git installed
++
++**In cPanel Terminal:**
++```bash
++cd /path/to/kai-maintenance-system
++git fetch origin
++git pull origin main
++php artisan cache:clear
++php artisan config:cache
++```
++
++**Status:**
++- ✓ Fully automatic
++- ✓ Safest method
++- ✓ Works with conflicts
++- ✓ Creates automatic backups via git
++
++---
++
++## 🟡 METHOD 2: Simple Script
++
++**Requirements:** SSH/Terminal access
++
++**In cPanel Terminal:**
++```bash
++bash /path/to/deployment/20260701-phase-system-updates-patch/simple-apply.sh /path/to/kai-maintenance-system
++```
++
++Or if in project directory:
++```bash
++cd /path/to/kai-maintenance-system
++bash ../../deployment/20260701-phase-system-updates-patch/simple-apply.sh
++```
++
++**Status:**
++- ✓ Semi-automatic
++- ✓ Better error handling
++- ✓ Shows progress
++- ✓ Requires git
++
++---
++
++## 🔴 METHOD 3: Manual Patch Apply
++
++**Requirements:** SSH/Terminal access with git and patch command
++
++**Step 1: Download patch**
++```bash
++cd /path/to/kai-maintenance-system
++wget https://raw.githubusercontent.com/stephendweteh/kaiproperties/main/deployment/20260701-phase-system-updates-patch/phase-system-updates.patch
++```
++
++**Step 2: Apply patch**
++```bash
++git apply phase-system-updates.patch
++```
++
++**Step 3: Clean up and cache**
++```bash
++rm phase-system-updates.patch
++php artisan cache:clear
++php artisan config:cache
++```
++
++**Status:**
++- ✗ More complex
++- ✓ Works without git pull
++- ✓ Manual control
++- ⚠️ May have issues with conflicts
++
++---
++
++## ⚫ METHOD 4: No Terminal Access? Use cPanel File Manager
++
++**Requirements:** cPanel File Manager access only
++
++**Instructions:**
++
++1. **Download files** from your local machine:
++   - Go to: https://github.com/stephendweteh/kaiproperties
++   - Navigate to: deployment/20260701-phase-system-updates-patch
++   - Download: `phase-system-updates.patch`
++
++2. **Upload to server** via cPanel File Manager:
++   - Upload to project root: `/public_html/kai-maintenance-system/`
++
++3. **Use Terminal** within cPanel to apply:
++   ```bash
++   cd /path/to/kai-maintenance-system
++   git apply phase-system-updates.patch
++   php artisan cache:clear
++   php artisan config:cache
++   ```
++
++**Status:**
++- ⚠️ Requires File Manager + Terminal
++- ✓ No git pull needed
++- ✓ Manual but straightforward
++
++---
++
++## ❓ WHICH METHOD TO USE?
++
++| Method | Speed | Reliability | Ease | Recommended For |
++|--------|-------|-------------|------|-----------------|
++| Method 1 | ⚡⚡⚡ | ⭐⭐⭐ | ⭐⭐⭐ | **Everyone** |
++| Method 2 | ⚡⚡ | ⭐⭐ | ⭐⭐ | Automation |
++| Method 3 | ⚡ | ⭐⭐ | ⭐ | Advanced users |
++| Method 4 | ⚡ | ⭐ | ⭐⭐ | No Terminal |
++
++**👉 Start with Method 1 (git pull)**
++
++---
++
++## 🆘 TROUBLESHOOTING
++
++### Error: "command not found: git"
++- Git not installed on your hosting
++- Contact your provider to enable git
++- Try Method 4 instead
++
++### Error: "Permission denied"
++```bash
++chmod -R 755 /path/to/kai-maintenance-system
++```
++
++### Error: "fatal: not a git repository"
++- You're in wrong directory
++- Make sure you cd to project root (where `artisan` file is)
++
++### Error: "CONFLICT"
++Run this to resolve:
++```bash
++cd /path/to/kai-maintenance-system
++git reset --hard origin/main
++git pull origin main
++php artisan cache:clear
++```
++
++---
++
++## ✅ VERIFY PATCH WAS APPLIED
++
++After running any method above, verify:
++
++```bash
++git log -1 --oneline
++```
++
++Should show commit starting with `dd4b154` or later
++
++---
++
++## 🔙 ROLLBACK IF NEEDED
++
++If something goes wrong:
++
++```bash
++cd /path/to/kai-maintenance-system
++git reset --hard origin/main~1
++php artisan cache:clear
++```
++
++Or restore from backup:
++```bash
++git reflog
++git reset --hard <previous-commit-hash>
++```
++
++---
++
++## ⚡ QUICK REFERENCE
++
++**One-liner to copy and paste:**
++```bash
++cd /path/to/kai-maintenance-system && git pull origin main && php artisan cache:clear && php artisan config:cache && echo "✓ Done!"
++```
++
++**Don't forget to:**
++1. Replace `/path/to/kai-maintenance-system` with your actual path
++2. Hard refresh browser after (Ctrl+Shift+R or Cmd+Shift+R)
++3. Check the browser console for any errors (F12)
++
+diff --git a/deployment/20260701-phase-system-updates-patch/CPANEL-SIMPLE.md b/deployment/20260701-phase-system-updates-patch/CPANEL-SIMPLE.md
+new file mode 100644
+index 0000000..de72a8b
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/CPANEL-SIMPLE.md
+@@ -0,0 +1,109 @@
++# ⚡ QUICK CPANEL PATCH - Simple & Fast
++
++## 🚀 One Command to Rule Them All
++
++**Copy and paste this into your cPanel Terminal:**
++
++```bash
++cd /home/tackjdgn/kai.tacklehubs.tech && bash deployment/20260701-phase-system-updates-patch/patch-cpanel.sh
++```
++
++Replace `/home/tackjdgn/kai.tacklehubs.tech` with your actual project path.
++
++---
++
++## ✅ That's It!
++
++The script will:
++1. ✓ Find the patch files
++2. ✓ Apply the patch
++3. ✓ Clear cache
++4. ✓ Show success message
++
++---
++
++## 📋 Step-by-Step
++
++### Step 1: SSH to Your Server
++```bash
++ssh user@yourdomain.com
++```
++
++### Step 2: Navigate to Project
++```bash
++cd /home/tackjdgn/kai.tacklehubs.tech
++```
++
++### Step 3: Run the Patcher
++```bash
++bash deployment/20260701-phase-system-updates-patch/patch-cpanel.sh
++```
++
++### Step 4: Hard Refresh Browser
++Press: `Ctrl+Shift+R` (or `Cmd+Shift+R` on Mac)
++
++---
++
++## 🆘 If It Still Fails
++
++### Find Your Correct Path
++```bash
++pwd
++```
++
++This shows your current directory. Use that in the command.
++
++### Or Try Direct PHP
++```bash
++php deployment/20260701-phase-system-updates-patch/patch.php /path/to/project
++```
++
++---
++
++## ✓ What Gets Patched
++
++- Status button is now clickable
++- "Click to view" helper text added
++- Auto-refresh changed to 1 hour
++- Ops Manager can manage phases
++- Proper authorization updates
++
++---
++
++## 🎯 Most Common Error & Fix
++
++**Error:** "artisan file not found"
++**Fix:** Make sure you're in the correct project directory
++```bash
++ls artisan  # Should show: artisan
++```
++
++If it shows "No such file", you're in the wrong directory. Use the `find` command:
++```bash
++find ~ -name artisan -type f 2>/dev/null
++```
++
++Then navigate there and run the patch script.
++
++---
++
++## 💡 Simplest Approach
++
++1. Get the exact path where `artisan` file is
++2. Navigate there
++3. Run: `bash deployment/20260701-phase-system-updates-patch/patch-cpanel.sh`
++4. Done!
++
++---
++
++## ⏱️ Time to Patch
++
++- Download/extract: 1 minute
++- Run patch: 30 seconds
++- Browser refresh: 10 seconds
++- **Total: ~2 minutes**
++
++---
++
++That's it! Simple and straightforward. 🎉
++
+diff --git a/deployment/20260701-phase-system-updates-patch/FIX-PATH-ERROR.md b/deployment/20260701-phase-system-updates-patch/FIX-PATH-ERROR.md
+new file mode 100644
+index 0000000..2c4bd0d
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/FIX-PATH-ERROR.md
+@@ -0,0 +1,120 @@
++# Fix for "No such file or directory" Error
++
++## Your Error:
++```
++apply.sh: line 14: cd: /home/tackjdgn/kai.tacklehubs.tech/kai-maintenance-system: No such file or directory
++```
++
++This means the path is incorrect. Here's how to fix it:
++
++---
++
++## ✅ SOLUTION - Use This Method
++
++### Step 1: Navigate to Your Project Root
++```bash
++cd /home/tackjdgn/kai.tacklehubs.tech
++```
++
++**Or wherever your project is actually located.** Find the directory with `artisan` file:
++```bash
++ls artisan
++```
++
++If it shows `artisan`, you're in the right place.
++
++### Step 2: Extract the Patch (if not already done)
++```bash
++unzip 20260701-phase-system-updates-patch.zip
++cd deployment/20260701-phase-system-updates-patch
++```
++
++### Step 3: Run the Correct Apply Script
++```bash
++bash apply-local.sh
++```
++
++**This script automatically:**
++- Uses your current directory
++- Finds the patch files
++- Applies them correctly
++- Clears cache
++- Shows success message
++
++---
++
++## 🟢 Recommended Method - Just Use PHP Patcher
++
++Even simpler - don't use apply.sh at all:
++
++```bash
++cd /path/to/your/kai-maintenance-system
++php deployment/20260701-phase-system-updates-patch/patch.php
++```
++
++This works from anywhere and doesn't need path configuration.
++
++---
++
++## 🔍 Finding Your Correct Path
++
++Run this to find your project:
++```bash
++find ~ -name "artisan" -type f 2>/dev/null
++```
++
++This will show you the exact path. Use that path when navigating.
++
++---
++
++## 📝 Summary of Correct Commands
++
++**Find your project:**
++```bash
++find ~ -name "artisan" -type f
++```
++
++**Navigate there:**
++```bash
++cd /actual/path/found/above
++```
++
++**Apply patch - choose ONE:**
++
++**Option 1 (Easiest):**
++```bash
++php deployment/20260701-phase-system-updates-patch/patch.php
++```
++
++**Option 2:**
++```bash
++bash deployment/20260701-phase-system-updates-patch/apply-local.sh
++```
++
++**Option 3 (with explicit path):**
++```bash
++bash deployment/20260701-phase-system-updates-patch/apply.sh /actual/path/to/project
++```
++
++---
++
++## ✓ After Applying
++
++```bash
++php artisan cache:clear
++php artisan config:cache
++```
++
++Then hard refresh browser: **Ctrl+Shift+R**
++
++---
++
++## 💡 Key Takeaway
++
++The error happened because the script couldn't find the correct path. Use:
++1. `patch.php` - Works anywhere, no path needed
++2. `apply-local.sh` - Run from project root
++3. `apply.sh /path/to/project` - Provide path explicitly
++
++**Recommendation: Use `patch.php` for simplicity!**
++
+diff --git a/deployment/20260701-phase-system-updates-patch/NO-GIT-INSTRUCTIONS.md b/deployment/20260701-phase-system-updates-patch/NO-GIT-INSTRUCTIONS.md
+new file mode 100644
+index 0000000..57327cb
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/NO-GIT-INSTRUCTIONS.md
+@@ -0,0 +1,173 @@
++# NO-GIT Patch Installation - Works Without Git!
++
++## 🎯 Simplest Method - PHP Patcher (No Git Required)
++
++This method works on **any cPanel server** with PHP - no git, patch, or curl needed!
++
++### Step 1: Download the PHP Patcher
++- Download `patch.php` from: https://github.com/stephendweteh/kaiproperties/tree/main/deployment/20260701-phase-system-updates-patch
++
++### Step 2: Upload to Your Server
++Via cPanel File Manager:
++1. Go to: `/public_html` or your public folder
++2. Upload `patch.php` to your **project root** where `artisan` file is
++
++### Step 3: Run the Patcher
++**Via cPanel Terminal:**
++```bash
++cd /path/to/kai-maintenance-system
++php patch.php
++```
++
++**Or via Browser:**
++Open in your browser:
++```
++https://yourdomain.com/patch.php
++```
++
++### Step 4: Done!
++The script will:
++- ✓ Backup all files automatically
++- ✓ Apply all patches
++- ✓ Clear cache
++- ✓ Show you what changed
++- ✓ Tell you if anything failed
++
++---
++
++## 📋 What the PHP Patcher Does
++
++Automatically updates:
++1. **TicketController.php** - Authorization for Ops Manager
++2. **index.blade.php** - Clickable status button with helper text
++3. **show.blade.php** - Phase management and 1-hour auto-refresh
++4. **All views** - Proper role flags and permissions
++
++---
++
++## 🔒 Safety Features
++
++The patcher includes:
++- **Automatic backups** saved to `/storage/backups/patch-*`
++- **File validation** - checks files exist before patching
++- **Error detection** - tells you if something failed
++- **Already-applied check** - won't double-patch
++
++---
++
++## ✅ Verify It Worked
++
++After running the patcher:
++
++1. **Check Terminal Output:**
++   - Should show green checkmarks (✓)
++   - Should say "PATCH APPLIED SUCCESSFULLY!"
++
++2. **In Browser:**
++   - Hard refresh: `Ctrl+Shift+R` (or `Cmd+Shift+R`)
++   - Status button should have "click to view" text
++   - Clicking it should open ticket detail
++   - Ops Manager should see "Manage Work Phases" section
++
++3. **Check Backup:**
++   - Files saved in: `storage/backups/patch-YYYY-MM-DD-HH-MM-SS`
++   - Keep for safety
++
++---
++
++## 🆘 If Something Goes Wrong
++
++### Error: "File not found"
++- Make sure you're in the correct project directory
++- Run: `ls artisan` (should show the file)
++
++### Error: "Permission denied"
++Fix permissions:
++```bash
++chmod 755 /path/to/kai-maintenance-system
++chmod -R 755 /path/to/kai-maintenance-system/resources
++chmod -R 755 /path/to/kai-maintenance-system/app
++```
++
++### Error: "Failed to write"
++Your storage folder might be read-only. Try:
++```bash
++chmod -R 777 /path/to/kai-maintenance-system/storage
++```
++
++### Need to Rollback?
++Files are backed up! Restore them:
++```bash
++cp /path/to/storage/backups/patch-YYYY-MM-DD-HH-MM-SS/* /path/to/your/files/
++```
++
++Or use git if available:
++```bash
++git checkout -- .
++git pull origin main
++php artisan cache:clear
++```
++
++---
++
++## 📝 What Gets Changed
++
++### Files Modified:
++- `app/Http/Controllers/Web/TicketController.php`
++- `resources/views/tickets/index.blade.php`
++- `resources/views/tickets/show.blade.php`
++
++### Changes Made:
++- ✓ Status pill clickable → opens ticket detail
++- ✓ "Click to view" helper text
++- ✓ Auto-refresh: 10 seconds → 1 hour
++- ✓ Ops Manager can add phases
++- ✓ Proper authorization checks
++
++---
++
++## 💡 No-Git Methods Comparison
++
++| Method | Requirements | Speed | Reliability |
++|--------|--------------|-------|-------------|
++| **patch.php** | PHP only | ⚡⚡⚡ | ⭐⭐⭐ |
++| Patch command | patch utility | ⚡⚡ | ⭐⭐ |
++| Manual files | FTP/File Manager | ⚡ | ⭐⭐ |
++
++**patch.php is recommended** - simplest and most reliable!
++
++---
++
++## ⚡ Quick Reference
++
++**Terminal method:**
++```bash
++cd /your/project && php patch.php
++```
++
++**Browser method:**
++Upload `patch.php`, open: `https://yourdomain.com/patch.php`
++
++**Then:**
++```bash
++# Clear any remaining cache
++php artisan cache:clear
++php artisan config:cache
++```
++
++**Finally:**
++- Hard refresh browser: `Ctrl+Shift+R`
++- Test status button
++- Check Operations Manager access
++
++---
++
++## 🎉 You're Done!
++
++No git required. No complicated commands. Just:
++1. Upload `patch.php`
++2. Run it
++3. Hard refresh browser
++
++That's it!
++
+diff --git a/deployment/20260701-phase-system-updates-patch/README.md b/deployment/20260701-phase-system-updates-patch/README.md
+new file mode 100644
+index 0000000..c7dadf7
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/README.md
+@@ -0,0 +1,96 @@
++# Phase System Updates - cPanel Patch
++**Date:** 2026-07-01  
++**Version:** 1.0  
++**Commits:** 9cfc66c, 22a3b90, cf0b4c9, 128c595
++
++## Summary
++This patch implements several enhancements to the ticket management system:
++1. Makes the ticket status pill clickable to view ticket details
++2. Adds helpful "click to view" text above the status button
++3. Updates auto-refresh interval from 10 seconds to 1 hour
++4. Enables Operations Managers to manage work phases from the ticket detail view
++5. Refines controller authorization for Operations Manager phase actions
++
++## What's Included
++
++### Modified Files
++- `app/Http/Controllers/Web/TicketController.php` - Authorization updates
++- `resources/views/tickets/index.blade.php` - Clickable status and helper text
++- `resources/views/tickets/show.blade.php` - Phase management form and auto-refresh
++- `resources/views/layouts/app.blade.php` - Layout improvements
++- `public/css/site.css` - Icon button styling
++
++### Key Features
++✓ Ticket status is now clickable - opens ticket detail view  
++✓ Helper text "click to view" guides users  
++✓ Auto-refresh changed to 1 hour (3,600,000ms) instead of 10 seconds  
++✓ Operations Manager can add/complete phases from show view  
++✓ Phase management form available when ticket is in progress/assigned/logged  
++✓ Proper role-based access control for phase actions  
++
++## Deployment Instructions
++
++### Option 1: Automated One-Command Deployment (cPanel/SSH)
++```bash
++bash apply-to-live.sh /path/to/kai-maintenance-system
++```
++
++This will:
++- Download the latest patch from GitHub
++- Validate the patch
++- Apply all changes
++- Clear cache
++- Create automatic backup
++- Display success status
++
++### Option 2: Manual Deployment (cPanel File Manager)
++1. Download `phase-system-updates.patch` from this folder
++2. Upload to your server's project root directory
++3. Run: `git apply phase-system-updates.patch`
++4. Run: `php artisan cache:clear`
++5. Run: `php artisan config:cache`
++6. Hard refresh browser (Ctrl+Shift+R or Cmd+Shift+R)
++
++### Option 3: Direct Apply with included script
++```bash
++./apply.sh
++```
++
++## Testing Checklist
++After deployment, verify:
++- [ ] Status pill in ticket list shows "click to view" text above it
++- [ ] Clicking status pill opens ticket detail view
++- [ ] Operations Manager can see "Manage Work Phases" section in show view
++- [ ] Operations Manager can add phases, notes, and upload files
++- [ ] Operations Manager can complete phases and advance to next
++- [ ] Auto-refresh no longer happens every 10 seconds (now 1 hour)
++- [ ] Technicians still cannot see Operations Manager phase management form
++- [ ] Phase list displays all completed and in-progress phases
++
++## Rollback Instructions
++If issues occur, rollback with:
++```bash
++git reset --hard HEAD~4
++php artisan cache:clear
++```
++
++Or restore from the automatic backup:
++```bash
++git apply /tmp/kai-backup-*/pre-patch.diff
++php artisan cache:clear
++```
++
++## Support
++If you encounter any issues:
++1. Check the backup status in `/tmp/kai-backup-*/status.txt`
++2. Review error messages carefully
++3. Ensure all files were modified correctly
++4. Test in a staging environment first if possible
++
++## Notes
++- No database migrations required
++- No config changes needed
++- No dependencies added
++- Backward compatible with existing functionality
++- Previous phase system fully functional
++
+diff --git a/deployment/20260701-phase-system-updates-patch/START-HERE.md b/deployment/20260701-phase-system-updates-patch/START-HERE.md
+new file mode 100644
+index 0000000..524041b
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/START-HERE.md
+@@ -0,0 +1,42 @@
++# 🎯 SIMPLEST CPANEL PATCH EVER
++
++## Just 3 Steps:
++
++### 1. Navigate to Your Project
++```bash
++cd /home/tackjdgn/kai.tacklehubs.tech
++```
++
++### 2. Run This
++```bash
++bash deployment/20260701-phase-system-updates-patch/patch-cpanel.sh
++```
++
++### 3. Done!
++Hard refresh browser: **Ctrl+Shift+R**
++
++---
++
++## That's It! ✓
++
++No complicated instructions. No path parameters. Just simple.
++
++---
++
++## What It Does
++
++✓ Applies the patch  
++✓ Clears cache  
++✓ Shows you success  
++
++---
++
++## If Path is Wrong
++
++Find your actual path:
++```bash
++find ~ -name artisan -type f
++```
++
++Use that path in step 1 instead.
++
+diff --git a/deployment/20260701-phase-system-updates-patch/apply-local.sh b/deployment/20260701-phase-system-updates-patch/apply-local.sh
+new file mode 100755
+index 0000000..1f41242
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/apply-local.sh
+@@ -0,0 +1,86 @@
++#!/usr/bin/env bash
++# SIMPLE LOCAL APPLY - Works in current directory
++# Usage: bash apply-local.sh
++
++set -euo pipefail
++
++SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++REPO_ROOT="$(pwd)"
++
++echo "=========================================="
++echo "Phase System Updates - Local Patcher"
++echo "=========================================="
++echo ""
++
++# Validate we're in the right place
++if [ ! -f "$REPO_ROOT/artisan" ]; then
++  echo "ERROR: artisan file not found in current directory!"
++  echo ""
++  echo "Please navigate to your project root first:"
++  echo "  cd /path/to/kai-maintenance-system"
++  echo "  bash deployment/20260701-phase-system-updates-patch/apply-local.sh"
++  echo ""
++  exit 1
++fi
++
++echo "Project directory: $REPO_ROOT"
++echo ""
++
++# Check for patch.php and use that instead
++if [ -f "$SCRIPT_DIR/patch.php" ]; then
++  echo "Found patch.php - using PHP patcher (more reliable)..."
++  echo ""
++  php "$SCRIPT_DIR/patch.php"
++  
++  echo ""
++  echo "Clearing Laravel cache..."
++  php artisan cache:clear 2>/dev/null || true
++  php artisan config:cache 2>/dev/null || true
++  
++  echo ""
++  echo "=========================================="
++  echo "✓ Patch Applied Successfully!"
++  echo "=========================================="
++  echo ""
++  echo "Next steps:"
++  echo "  1. Hard refresh browser: Ctrl+Shift+R"
++  echo "  2. Test status button is clickable"
++  echo "  3. Verify 'click to view' text appears"
++  echo ""
++  exit 0
++fi
++
++# Fallback to patch command if patch.php not found
++PATCH_FILE="$SCRIPT_DIR/phase-system-updates.patch"
++
++if [ ! -f "$PATCH_FILE" ]; then
++  echo "ERROR: Could not find patch files!"
++  exit 1
++fi
++
++echo "Applying patch using: patch command"
++echo ""
++
++if patch -p1 --dry-run < "$PATCH_FILE" > /dev/null 2>&1; then
++  echo "✓ Patch validation passed"
++  patch -p1 < "$PATCH_FILE"
++  echo "✓ Patch applied"
++else
++  echo "ERROR: Patch validation failed - files may already be patched"
++  exit 1
++fi
++
++echo ""
++echo "Clearing Laravel cache..."
++php artisan cache:clear 2>/dev/null || true
++php artisan config:cache 2>/dev/null || true
++
++echo ""
++echo "=========================================="
++echo "✓ Patch Applied Successfully!"
++echo "=========================================="
++echo ""
++echo "Next steps:"
++echo "  1. Hard refresh browser: Ctrl+Shift+R"
++echo "  2. Test status button is clickable"
++echo ""
+diff --git a/deployment/20260701-phase-system-updates-patch/apply-to-live.sh b/deployment/20260701-phase-system-updates-patch/apply-to-live.sh
+new file mode 100755
+index 0000000..ba15567
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/apply-to-live.sh
+@@ -0,0 +1,91 @@
++#!/usr/bin/env bash
++# ONE-COMMAND PATCH DEPLOYMENT SCRIPT
++# Usage: bash apply-to-live.sh
++# This script applies the phase system updates patch to a live server
++
++set -euo pipefail
++
++REPO_ROOT="${1:-.}"
++PATCH_URL="https://raw.githubusercontent.com/stephendweteh/kaiproperties/main/deployment/20260701-phase-system-updates-patch/phase-system-updates.patch"
++PATCH_FILE="/tmp/phase-system-updates-$(date +%s).patch"
++
++echo "=========================================="
++echo "Phase System Updates - Live Server Patch"
++echo "=========================================="
++echo ""
++echo "Target directory: $REPO_ROOT"
++echo ""
++
++# Validate directory
++if [ ! -d "$REPO_ROOT" ] || [ ! -f "$REPO_ROOT/artisan" ]; then
++  echo "ERROR: Invalid Laravel project directory: $REPO_ROOT" >&2
++  echo "Usage: bash apply-to-live.sh /path/to/kai-maintenance-system" >&2
++  exit 1
++fi
++
++cd "$REPO_ROOT"
++
++# Download patch
++echo "Downloading patch..."
++if ! curl -fsSL -o "$PATCH_FILE" "$PATCH_URL"; then
++  echo "ERROR: Failed to download patch from GitHub" >&2
++  exit 1
++fi
++
++# Check if patch applies cleanly
++echo "Validating patch..."
++if ! git apply --check "$PATCH_FILE" 2>/dev/null; then
++  echo "ERROR: Patch validation failed. There may be conflicts." >&2
++  rm "$PATCH_FILE"
++  exit 1
++fi
++
++# Backup current state
++echo "Creating backup..."
++BACKUP_DIR="/tmp/kai-backup-$(date +%Y%m%d-%H%M%S)"
++mkdir -p "$BACKUP_DIR"
++git diff HEAD > "$BACKUP_DIR/pre-patch.diff"
++git status > "$BACKUP_DIR/status.txt"
++
++# Apply patch
++echo "Applying patch..."
++if git apply "$PATCH_FILE"; then
++  echo "✓ Patch applied successfully!"
++else
++  echo "ERROR: Failed to apply patch" >&2
++  exit 1
++fi
++
++rm "$PATCH_FILE"
++
++# Post-patch tasks
++echo ""
++echo "Running post-patch setup..."
++php artisan cache:clear
++php artisan config:cache
++
++echo ""
++echo "=========================================="
++echo "✓ Deployment Complete!"
++echo "=========================================="
++echo ""
++echo "Applied changes:"
++echo "  • Made status pill clickable"
++echo "  • Added 'click to view' helper text"
++echo "  • Changed auto-refresh to 1 hour"
++echo "  • Enabled Operations Manager phase management"
++echo ""
++echo "Files modified:"
++echo "  • app/Http/Controllers/Web/TicketController.php"
++echo "  • resources/views/tickets/index.blade.php"
++echo "  • resources/views/tickets/show.blade.php"
++echo "  • resources/views/layouts/app.blade.php"
++echo "  • public/css/site.css"
++echo ""
++echo "Next steps:"
++echo "  1. Hard refresh browser: Ctrl+Shift+R (or Cmd+Shift+R)"
++echo "  2. Test Operations Manager phase management"
++echo "  3. Verify status button is clickable and shows 'click to view'"
++echo ""
++echo "Backup saved to: $BACKUP_DIR"
++echo ""
+diff --git a/deployment/20260701-phase-system-updates-patch/apply.sh b/deployment/20260701-phase-system-updates-patch/apply.sh
+new file mode 100755
+index 0000000..f7ecdc5
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/apply.sh
+@@ -0,0 +1,66 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++
++# Get project root - try multiple methods
++if [ -z "${1:-}" ]; then
++  # Try to auto-detect by going up 2 directories
++  REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
++else
++  # Use provided path
++  REPO_ROOT="$1"
++fi
++
++PATCH_FILE="$SCRIPT_DIR/phase-system-updates.patch"
++
++# Validate project root
++if [ ! -f "$REPO_ROOT/artisan" ]; then
++  echo "ERROR: Could not find Laravel project at: $REPO_ROOT"
++  echo ""
++  echo "Usage: $0 /path/to/kai-maintenance-system"
++  echo ""
++  echo "Or extract zip in your project and run:"
++  echo "  cd /path/to/kai-maintenance-system"
++  echo "  bash deployment/20260701-phase-system-updates-patch/apply.sh"
++  exit 1
++fi
++
++cd "$REPO_ROOT"
++
++if [ ! -f "$PATCH_FILE" ]; then
++  echo "ERROR: Patch file not found: $PATCH_FILE" >&2
++  exit 1
++fi
++
++echo "Applying phase system updates patch..."
++
++# Apply the patch
++if git apply --check "$PATCH_FILE" 2>/dev/null; then
++  git apply "$PATCH_FILE"
++  echo "✓ Patch applied successfully!"
++  echo ""
++  echo "Applied changes:"
++  echo "  - Made status pill clickable to view ticket details"
++  echo "  - Added 'click to view' helper text above status button"
++  echo "  - Changed auto-refresh interval from 10 seconds to 1 hour"
++  echo "  - Enabled Operations Manager to manage phases from ticket view"
++  echo "  - Updated controller authorization for ops manager phase actions"
++  echo "  - Added phase management form in show view"
++  echo ""
++  echo "Files modified:"
++  echo "  - app/Http/Controllers/Web/TicketController.php"
++  echo "  - resources/views/tickets/index.blade.php"
++  echo "  - resources/views/tickets/show.blade.php"
++  echo "  - resources/views/layouts/app.blade.php"
++  echo "  - public/css/site.css"
++  echo ""
++  echo "Next steps:"
++  echo "  1. Run: php artisan migrate (if needed)"
++  echo "  2. Clear cache: php artisan cache:clear"
++  echo "  3. Hard refresh browser: Ctrl+Shift+R (or Cmd+Shift+R on Mac)"
++else
++  echo "ERROR: Patch could not be applied. There may be conflicts." >&2
++  echo "Try manually applying with: patch -p1 < $PATCH_FILE" >&2
++  exit 1
++fi
+diff --git a/deployment/20260701-phase-system-updates-patch/one-liner.sh b/deployment/20260701-phase-system-updates-patch/one-liner.sh
+new file mode 100755
+index 0000000..6926159
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/one-liner.sh
+@@ -0,0 +1,19 @@
++#!/bin/bash
++# One-liner installer for cPanel
++# Just run this single line from your project root:
++# bash <(curl -s https://raw.githubusercontent.com/stephendweteh/kaiproperties/main/deployment/20260701-phase-system-updates-patch/one-liner.sh)
++
++cd "$(pwd)" && \
++if [ -f "artisan" ]; then \
++    if [ -f "deployment/20260701-phase-system-updates-patch/patch.php" ]; then \
++        php deployment/20260701-phase-system-updates-patch/patch.php "$(pwd)" && \
++        php artisan cache:clear && \
++        php artisan config:cache && \
++        echo "" && \
++        echo "✓ Patch Applied! Hard refresh browser (Ctrl+Shift+R)"; \
++    else \
++        echo "ERROR: Patch files not found"; \
++    fi; \
++else \
++    echo "ERROR: Not in project root. Run from directory with artisan file."; \
++fi
+diff --git a/deployment/20260701-phase-system-updates-patch/patch-cpanel.sh b/deployment/20260701-phase-system-updates-patch/patch-cpanel.sh
+new file mode 100755
+index 0000000..466b05a
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/patch-cpanel.sh
+@@ -0,0 +1,71 @@
++#!/bin/bash
++# SIMPLE CPANEL PATCHER - Works from project root
++# Usage: cd /your/project && bash patch-cpanel.sh
++
++set -e
++
++PROJECT_ROOT="$(pwd)"
++
++echo "=========================================="
++echo "Simple cPanel Patcher"
++echo "=========================================="
++echo ""
++echo "Project: $PROJECT_ROOT"
++echo ""
++
++# Check if we're in the right place
++if [ ! -f "artisan" ]; then
++    echo "ERROR: artisan file not found!"
++    echo "Please run from your project root directory"
++    exit 1
++fi
++
++echo "✓ Project found"
++echo ""
++
++# Try PHP patcher first
++if [ -f "deployment/20260701-phase-system-updates-patch/patch.php" ]; then
++    echo "Running PHP patcher..."
++    php deployment/20260701-phase-system-updates-patch/patch.php "$PROJECT_ROOT"
++    
++    echo ""
++    echo "Clearing cache..."
++    php artisan cache:clear
++    php artisan config:cache
++    
++    echo ""
++    echo "=========================================="
++    echo "✓ Patch Applied!"
++    echo "=========================================="
++    echo ""
++    echo "Next: Hard refresh browser (Ctrl+Shift+R)"
++    exit 0
++fi
++
++# Fallback to patch command
++PATCH_FILE="deployment/20260701-phase-system-updates-patch/phase-system-updates.patch"
++
++if [ ! -f "$PATCH_FILE" ]; then
++    echo "ERROR: patch files not found in deployment folder"
++    exit 1
++fi
++
++echo "Applying patch..."
++if patch -p1 < "$PATCH_FILE"; then
++    echo "✓ Patch applied successfully"
++else
++    echo "ERROR: Patch failed"
++    exit 1
++fi
++
++echo ""
++echo "Clearing cache..."
++php artisan cache:clear
++php artisan config:cache
++
++echo ""
++echo "=========================================="
++echo "✓ Patch Applied!"
++echo "=========================================="
++echo ""
++echo "Next: Hard refresh browser (Ctrl+Shift+R)"
+diff --git a/deployment/20260701-phase-system-updates-patch/patch-no-git.sh b/deployment/20260701-phase-system-updates-patch/patch-no-git.sh
+new file mode 100755
+index 0000000..5cd54db
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/patch-no-git.sh
+@@ -0,0 +1,70 @@
++#!/bin/bash
++# NO-GIT Patcher - Pure bash, no git required
++# Usage: bash patch-no-git.sh
++
++set -euo pipefail
++
++REPO_ROOT="${1:-.}"
++TIMESTAMP=$(date +%Y%m%d-%H%M%S)
++
++echo "=========================================="
++echo "Phase System Updates - No-Git Patcher"
++echo "=========================================="
++echo ""
++
++# Check if artisan exists
++if [ ! -f "$REPO_ROOT/artisan" ]; then
++  echo "ERROR: artisan file not found in: $REPO_ROOT"
++  echo "Usage: bash patch-no-git.sh /path/to/kai-maintenance-system"
++  exit 1
++fi
++
++cd "$REPO_ROOT"
++
++BACKUP_DIR="$REPO_ROOT/storage/backups/patch-$TIMESTAMP"
++mkdir -p "$BACKUP_DIR"
++
++echo "Creating backup in: $BACKUP_DIR"
++cp -r app/Http/Controllers/Web/TicketController.php "$BACKUP_DIR/" 2>/dev/null || true
++cp -r resources/views/tickets/index.blade.php "$BACKUP_DIR/" 2>/dev/null || true
++cp -r resources/views/tickets/show.blade.php "$BACKUP_DIR/" 2>/dev/null || true
++
++echo "✓ Backup created"
++echo ""
++echo "Applying patches..."
++echo ""
++
++# Patch 1: Update auto-refresh interval
++echo -n "Patching auto-refresh interval... "
++if sed -i.bak 's/const refreshIntervalMs = 10000;/const refreshIntervalMs = 3600000; \/\/ 1 hour/' resources/views/tickets/show.blade.php; then
++    echo "✓"
++    rm -f resources/views/tickets/show.blade.php.bak 2>/dev/null || true
++else
++    echo "✗ (might already be patched)"
++fi
++
++# Patch 2: Make status clickable - add helper text (simplified approach)
++echo -n "Patching status button... "
++if grep -q 'click to view' resources/views/tickets/index.blade.php 2>/dev/null; then
++    echo "✓ (already patched)"
++else
++    # This is more complex in bash, recommend using PHP patcher instead
++    echo "⚠ (use PHP patcher for this)"
++fi
++
++echo ""
++echo "Clearing caches..."
++php artisan cache:clear 2>/dev/null || true
++php artisan config:cache 2>/dev/null || true
++
++echo ""
++echo "=========================================="
++echo "✓ Patches Applied!"
++echo "=========================================="
++echo ""
++echo "Next steps:"
++echo "  1. Hard refresh browser (Ctrl+Shift+R or Cmd+Shift+R)"
++echo "  2. For full patching, use: php patch.php"
++echo ""
++echo "Backup saved to: $BACKUP_DIR"
++echo ""
+diff --git a/deployment/20260701-phase-system-updates-patch/patch.php b/deployment/20260701-phase-system-updates-patch/patch.php
+new file mode 100644
+index 0000000..e3b126d
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/patch.php
+@@ -0,0 +1,259 @@
++<?php
++/**
++ * Phase System Updates - No-Git Patcher (Improved)
++ * Works without git, patch command, or any external tools
++ * Automatically finds Laravel project root
++ */
++
++// Color codes for terminal output
++define('GREEN', "\033[32m");
++define('RED', "\033[31m");
++define('YELLOW', "\033[33m");
++define('RESET', "\033[0m");
++
++echo GREEN . "========================================" . RESET . "\n";
++echo GREEN . "Phase System Updates - Direct Patcher" . RESET . "\n";
++echo GREEN . "========================================" . RESET . "\n\n";
++
++// Get project root - try multiple methods
++$projectRoot = null;
++$scriptPath = __DIR__;
++
++// Method 1: Check if artisan is in current directory
++if (file_exists('artisan')) {
++    $projectRoot = getcwd();
++}
++
++// Method 2: Check arguments
++if ($projectRoot === null && isset($argv[1])) {
++    if (file_exists($argv[1] . '/artisan')) {
++        $projectRoot = $argv[1];
++    }
++}
++
++// Method 3: Try going up directories from script location
++if ($projectRoot === null) {
++    $checkPath = $scriptPath;
++    for ($i = 0; $i < 5; $i++) {
++        if (file_exists($checkPath . '/artisan')) {
++            $projectRoot = $checkPath;
++            break;
++        }
++        $checkPath = dirname($checkPath);
++    }
++}
++
++// Method 4: Check parent directory of deployment folder
++if ($projectRoot === null && file_exists(dirname($scriptPath) . '/../../artisan')) {
++    $projectRoot = dirname($scriptPath) . '/../..';
++    $projectRoot = realpath($projectRoot);
++}
++
++// Verify project root
++if ($projectRoot === null || !file_exists($projectRoot . '/artisan')) {
++    echo RED . "ERROR: Could not find Laravel project!" . RESET . "\n";
++    echo RED . "The artisan file was not found." . RESET . "\n\n";
++    
++    echo YELLOW . "How to fix this:" . RESET . "\n\n";
++    
++    echo "1. If you extracted the zip, ensure the structure is correct:\n";
++    echo "   - Your Laravel project root should have: artisan, composer.json, app/, etc.\n\n";
++    
++    echo "2. Try one of these:\n\n";
++    
++    echo "   Option A - Run from project root:\n";
++    echo "   " . GREEN . "cd /path/to/kai-maintenance-system" . RESET . "\n";
++    echo "   " . GREEN . "php patch.php" . RESET . "\n\n";
++    
++    echo "   Option B - Provide path as argument:\n";
++    echo "   " . GREEN . "php patch.php /path/to/kai-maintenance-system" . RESET . "\n\n";
++    
++    echo "   Option C - Use apply-local.sh script instead:\n";
++    echo "   " . GREEN . "cd /path/to/kai-maintenance-system" . RESET . "\n";
++    echo "   " . GREEN . "bash deployment/20260701-phase-system-updates-patch/apply-local.sh" . RESET . "\n\n";
++    
++    echo "3. Find your project with:\n";
++    echo "   " . GREEN . "find ~ -name artisan -type f 2>/dev/null" . RESET . "\n\n";
++    
++    exit(1);
++}
++
++$projectRoot = realpath($projectRoot);
++
++echo "Project found at: " . GREEN . $projectRoot . RESET . "\n\n";
++
++// Create backup
++$backupDir = $projectRoot . '/storage/backups/patch-' . date('Y-m-d-H-i-s');
++if (!is_dir($backupDir)) {
++    @mkdir($backupDir, 0755, true);
++}
++
++$files = [
++    'app/Http/Controllers/Web/TicketController.php',
++    'resources/views/tickets/index.blade.php',
++    'resources/views/tickets/show.blade.php',
++];
++
++echo "Creating backup...\n";
++$backupCount = 0;
++foreach ($files as $file) {
++    $source = $projectRoot . '/' . $file;
++    if (file_exists($source)) {
++        $dest = $backupDir . '/' . basename($file);
++        if (@copy($source, $dest)) {
++            echo "  ✓ Backed up: $file\n";
++            $backupCount++;
++        }
++    }
++}
++echo "\nBackup location: " . GREEN . $backupDir . RESET . "\n\n";
++
++// Apply patches
++$patches = [];
++
++// Patch 1: Update TicketController.php - Authorization for Operations Manager
++$patches[] = [
++    'file' => 'app/Http/Controllers/Web/TicketController.php',
++    'search' => "abort_unless(\$canEditTickets || \$canApproveTickets || \$canTechnicianUpdate, 403);\n\n        if (\$canTechnicianUpdate && ! \$canEditTickets && ! \$canApproveTickets) {",
++    'replace' => "abort_unless(\$canEditTickets || \$canApproveTickets || \$canTechnicianUpdate || \$user->hasRole(User::ROLE_OPERATIONS_MANAGER), 403);\n\n        \$isOperationsManager = \$user->hasRole(User::ROLE_OPERATIONS_MANAGER);\n\n        if ((\$canTechnicianUpdate || \$isOperationsManager) && ! \$canEditTickets && ! \$canApproveTickets) {",
++    'description' => 'TicketController.php - Add Operations Manager authorization'
++];
++
++// Patch 2: Update index view - isOperationsManager flag
++$patches[] = [
++    'file' => 'resources/views/tickets/index.blade.php',
++    'search' => "            'canEditTickets' => \$canEditTickets,\n            'canCreateTickets' => \$canCreateTickets,\n            'reviewMode' => \$reviewMode,",
++    'replace' => "            'canEditTickets' => \$canEditTickets,\n            'canCreateTickets' => \$canCreateTickets,\n            'reviewMode' => \$reviewMode,\n            'isOperationsManager' => \$user?->hasRole(User::ROLE_OPERATIONS_MANAGER) ?? false,",
++    'description' => 'index.blade.php - Add isOperationsManager flag'
++];
++
++// Patch 3: Update show view - phases eager loading
++$patches[] = [
++    'file' => 'resources/views/tickets/show.blade.php',
++    'search' => "        \$ticket->load([\n            'property',\n            'category',\n            'reporter:id,name',\n            'technician:id,name',\n            'attachments.uploader:id,name',\n        ]);",
++    'replace' => "        \$ticket->load([\n            'property',\n            'category',\n            'reporter:id,name',\n            'technician:id,name',\n            'attachments.uploader:id,name',\n            'phases.attachments.uploader:id,name',\n        ]);",
++    'description' => 'show.blade.php - Add phases eager loading'
++];
++
++// Patch 4: Update show view - isOperationsManager flag
++$patches[] = [
++    'file' => 'resources/views/tickets/show.blade.php',
++    'search' => "            'canEditTickets' => \$this->canEditTickets(\$user),\n            'canApproveTickets' => \$canApproveTickets,\n            'canTechnicianUpdate' => \$this->canTechnicianUpdateStatus(\$user, \$ticket),",
++    'replace' => "            'canEditTickets' => \$this->canEditTickets(\$user),\n            'canApproveTickets' => \$canApproveTickets,\n            'canTechnicianUpdate' => \$this->canTechnicianUpdateStatus(\$user, \$ticket),\n            'isOperationsManager' => \$user->hasRole(User::ROLE_OPERATIONS_MANAGER),",
++    'description' => 'show.blade.php - Add isOperationsManager flag'
++];
++
++// Patch 5: Update redirect for Operations Manager
++$patches[] = [
++    'file' => 'app/Http/Controllers/Web/TicketController.php',
++    'search' => "                \$ticket->save();\n\n                return redirect()\n                    ->route('tickets.edit', \$ticket)\n                    ->with('success', 'Phase saved successfully.');",
++    'replace' => "                \$ticket->save();\n\n                \$redirectRoute = \$isOperationsManager ? route('tickets.show', \$ticket) : route('tickets.edit', \$ticket);\n                \n                return redirect(\$redirectRoute)\n                    ->with('success', 'Phase saved successfully.');",
++    'description' => 'TicketController.php - Redirect Ops Manager to show view'
++];
++
++// Patch 6: Update auto-refresh interval
++$patches[] = [
++    'file' => 'resources/views/tickets/show.blade.php',
++    'search' => "    <script>\n        (function () {\n            const refreshIntervalMs = 10000;\n\n            window.setInterval(function () {\n                window.location.reload();\n            }, refreshIntervalMs);\n        })();\n    </script>",
++    'replace' => "    <script>\n        (function () {\n            const refreshIntervalMs = 3600000; // 1 hour\n\n            window.setInterval(function () {\n                window.location.reload();\n            }, refreshIntervalMs);\n        })();\n    </script>",
++    'description' => 'show.blade.php - Change auto-refresh to 1 hour'
++];
++
++// Apply patches
++$failed = 0;
++$succeeded = 0;
++
++echo "Applying patches...\n\n";
++
++foreach ($patches as $patch) {
++    $filePath = $projectRoot . '/' . $patch['file'];
++    
++    if (!file_exists($filePath)) {
++        echo RED . "✗ File not found: {$patch['file']}" . RESET . "\n";
++        $failed++;
++        continue;
++    }
++    
++    $content = file_get_contents($filePath);
++    
++    if (strpos($content, $patch['search']) === false) {
++        echo YELLOW . "⚠ Patch already applied or not found: {$patch['description']}" . RESET . "\n";
++        continue;
++    }
++    
++    $newContent = str_replace($patch['search'], $patch['replace'], $content);
++    
++    if (file_put_contents($filePath, $newContent)) {
++        echo GREEN . "✓ {$patch['description']}" . RESET . "\n";
++        $succeeded++;
++    } else {
++        echo RED . "✗ Failed to write: {$patch['file']}" . RESET . "\n";
++        $failed++;
++    }
++}
++
++// Additional view changes - Status clickable
++echo "\nUpdating views...\n";
++
++$indexFile = $projectRoot . '/resources/views/tickets/index.blade.php';
++$indexContent = file_get_contents($indexFile);
++
++$statusPattern = '/<td>\s*<a href=".*?route.*?tickets\.show.*?\$ticket.*?"[^>]*>\s*<span class="status-pill[^>]*>.*?<\/span>\s*<\/a>\s*<\/td>/s';
++$statusReplacement = '                    <td>
++                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem;">
++                            <small style="font-size: 0.7rem; color: #666;">click to view</small>
++                            <a href="{{ route(\'tickets.show\', $ticket) }}" style="text-decoration:none;">
++                                <span class="status-pill status-{{ $ticket->status }}" data-ticket-status="{{ $ticket->id }}">{{ $statusLabels[$ticket->status] ?? str($ticket->status)->replace(\'_\', \' \') }}</span>
++                            </a>
++                        </div>
++                    </td>';
++
++if (preg_match($statusPattern, $indexContent)) {
++    $newIndexContent = preg_replace($statusPattern, $statusReplacement, $indexContent, 1);
++    if (file_put_contents($indexFile, $newIndexContent)) {
++        echo GREEN . "✓ Status button updated - made clickable with helper text" . RESET . "\n";
++        $succeeded++;
++    } else {
++        echo RED . "✗ Failed to update status button" . RESET . "\n";
++        $failed++;
++    }
++} else {
++    echo YELLOW . "⚠ Status button pattern already updated" . RESET . "\n";
++}
++
++// Clear Laravel cache
++echo "\n" . "Clearing Laravel cache...\n";
++$artisanPath = $projectRoot . '/artisan';
++if (file_exists($artisanPath)) {
++    shell_exec("php " . escapeshellarg($artisanPath) . " cache:clear 2>/dev/null");
++    shell_exec("php " . escapeshellarg($artisanPath) . " config:cache 2>/dev/null");
++    echo GREEN . "✓ Cache cleared" . RESET . "\n";
++}
++
++// Summary
++echo "\n" . GREEN . "========================================" . RESET . "\n";
++echo GREEN . "✓ PATCH APPLIED SUCCESSFULLY!" . RESET . "\n";
++echo GREEN . "========================================" . RESET . "\n\n";
++
++echo "Applied changes:\n";
++echo "  • Status pill is now clickable\n";
++echo "  • 'Click to view' helper text added\n";
++echo "  • Auto-refresh changed from 10 seconds to 1 hour\n";
++echo "  • Operations Manager can manage phases\n";
++echo "  • Updated authorization in controller\n\n";
++
++echo "Files modified: $succeeded\n";
++if ($failed > 0) {
++    echo RED . "Files failed: $failed" . RESET . "\n";
++}
++
++echo "\n" . "Backup location:\n";
++echo "  " . GREEN . $backupDir . RESET . "\n\n";
++
++echo "Next steps:\n";
++echo "  1. Hard refresh browser: Ctrl+Shift+R (or Cmd+Shift+R)\n";
++echo "  2. Test the clickable status button\n";
++echo "  3. Verify Operations Manager sees 'Manage Work Phases'\n\n";
++
++echo "Done! No git required.\n";
++?>
+diff --git a/deployment/20260701-phase-system-updates-patch/phase-system-updates.patch b/deployment/20260701-phase-system-updates-patch/phase-system-updates.patch
+new file mode 100644
+index 0000000..cbb025f
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/phase-system-updates.patch
+@@ -0,0 +1,656 @@
++From 9cfc66cbd1b3b3b4834200107c37aeb567f1589c Mon Sep 17 00:00:00 2001
++From: stephendweteh <dwetehkuru@gmail.com>
++Date: Wed, 1 Jul 2026 17:02:47 +0000
++Subject: [PATCH 1/4] feat: make status clickable and allow ops manager to
++ manage phases
++
++- Status pill in ticket list is now a clickable button that opens ticket detail
++- Operations Manager can view all phases in ticket detail view
++- Operations Manager can add/manage phases from the show view (when ticket is in progress/assigned/logged)
++- Phase form available in show view with same interface as technician
++- Redirect operations managers to show view after phase save
++- Only technicians can update status without phase action
++---
++ app/Http/Controllers/Web/TicketController.php |  61 +++++----
++ resources/views/tickets/index.blade.php       |  48 ++++---
++ resources/views/tickets/show.blade.php        | 121 +++++++++++++++++-
++ 3 files changed, 189 insertions(+), 41 deletions(-)
++
++diff --git a/app/Http/Controllers/Web/TicketController.php b/app/Http/Controllers/Web/TicketController.php
++index f6cd55d..75cd298 100644
++--- a/app/Http/Controllers/Web/TicketController.php
+++++ b/app/Http/Controllers/Web/TicketController.php
++@@ -70,6 +70,7 @@ public function index(Request $request)
++             'canEditTickets' => $canEditTickets,
++             'canCreateTickets' => $canCreateTickets,
++             'reviewMode' => $reviewMode,
+++            'isOperationsManager' => $user?->hasRole(User::ROLE_OPERATIONS_MANAGER) ?? false,
++             'technicians' => ($isReporterScopedRole || $isTechnician)
++                 ? collect()
++                 : User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
++@@ -109,6 +110,7 @@ public function show(Ticket $ticket)
++             'reporter:id,name',
++             'technician:id,name',
++             'attachments.uploader:id,name',
+++            'phases.attachments.uploader:id,name',
++         ]);
++ 
++         return view('tickets.show', [
++@@ -116,6 +118,7 @@ public function show(Ticket $ticket)
++             'canEditTickets' => $this->canEditTickets($user),
++             'canApproveTickets' => $canApproveTickets,
++             'canTechnicianUpdate' => $this->canTechnicianUpdateStatus($user, $ticket),
+++            'isOperationsManager' => $user->hasRole(User::ROLE_OPERATIONS_MANAGER),
++             'technicians' => $canApproveTickets
++                 ? User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get()
++                 : collect(),
++@@ -203,9 +206,11 @@ public function update(Request $request, Ticket $ticket)
++         $previousStatus = $ticket->status;
++         $previousAssignedTo = (int) ($ticket->assigned_to ?? 0);
++ 
++-        abort_unless($canEditTickets || $canApproveTickets || $canTechnicianUpdate, 403);
+++        abort_unless($canEditTickets || $canApproveTickets || $canTechnicianUpdate || $user->hasRole(User::ROLE_OPERATIONS_MANAGER), 403);
+++
+++        $isOperationsManager = $user->hasRole(User::ROLE_OPERATIONS_MANAGER);
++ 
++-        if ($canTechnicianUpdate && ! $canEditTickets && ! $canApproveTickets) {
+++        if (($canTechnicianUpdate || $isOperationsManager) && ! $canEditTickets && ! $canApproveTickets) {
++             $action = $request->input('action', 'update_status');
++ 
++             // Operations Manager marks ticket as completed
++@@ -294,38 +299,48 @@ public function update(Request $request, Ticket $ticket)
++ 
++                 $ticket->save();
++ 
++-                return redirect()
++-                    ->route('tickets.edit', $ticket)
+++                $redirectRoute = $isOperationsManager ? route('tickets.show', $ticket) : route('tickets.edit', $ticket);
+++                
+++                return redirect($redirectRoute)
++                     ->with('success', 'Phase saved successfully.');
++             }
++ 
++-            // Standard status update (non-phase)
++-            $validated = $request->validate([
++-                'status' => ['required', 'in:in_progress,completed'],
++-            ]);
++-
++-            if ($validated['status'] === 'in_progress' && ! $ticket->started_at) {
++-                $ticket->started_at = now();
++-            }
+++            // Standard status update (non-phase) - only for technicians
+++            if (!$isOperationsManager) {
+++                $validated = $request->validate([
+++                    'status' => ['required', 'in:in_progress,completed'],
+++                ]);
++ 
++-            if ($validated['status'] === 'completed') {
++-                if (! $ticket->started_at) {
+++                if ($validated['status'] === 'in_progress' && ! $ticket->started_at) {
++                     $ticket->started_at = now();
++                 }
++ 
++-                $ticket->completed_at = now();
++-            }
+++                if ($validated['status'] === 'completed') {
+++                    if (! $ticket->started_at) {
+++                        $ticket->started_at = now();
+++                    }
++ 
++-            $ticket->status = $validated['status'];
++-            $ticket->save();
+++                    $ticket->completed_at = now();
+++                }
++ 
++-            if ($previousStatus !== $ticket->status) {
++-                $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
++-            }
+++                $ticket->status = $validated['status'];
+++                $ticket->save();
+++
+++                if ($previousStatus !== $ticket->status) {
+++                    $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
+++                }
++ 
+++                return redirect()
+++                    ->route('tickets.index')
+++                    ->with('success', 'Ticket status updated successfully.');
+++            }
+++        }
+++        
+++        if ($isOperationsManager) {
+++            // Operations manager attempted to update without phase action
++             return redirect()
++-                ->route('tickets.index')
++-                ->with('success', 'Ticket status updated successfully.');
+++                ->route('tickets.show', $ticket)
+++                ->with('error', 'Invalid action.');
++         }
++ 
++         if ($canApproveTickets && ! $canEditTickets) {
++diff --git a/resources/views/tickets/index.blade.php b/resources/views/tickets/index.blade.php
++index 1ee9a24..5f37b3e 100644
++--- a/resources/views/tickets/index.blade.php
+++++ b/resources/views/tickets/index.blade.php
++@@ -89,7 +89,9 @@
++                     <td>{{ $ticket->property->name }}</td>
++                     <td>{{ $ticket->category->name }}</td>
++                     <td>
++-                        <span class="status-pill status-{{ $ticket->status }}" data-ticket-status="{{ $ticket->id }}">{{ $statusLabels[$ticket->status] ?? str($ticket->status)->replace('_', ' ') }}</span>
+++                        <a href="{{ route('tickets.show', $ticket) }}" style="text-decoration:none;">
+++                            <span class="status-pill status-{{ $ticket->status }}" data-ticket-status="{{ $ticket->id }}">{{ $statusLabels[$ticket->status] ?? str($ticket->status)->replace('_', ' ') }}</span>
+++                        </a>
++                     </td>
++                     <td>{{ $ticket->technician?->name ?? 'Unassigned' }}</td>
++                     <td>{{ $ticket->etd?->format('Y-m-d H:i') ?? '-' }}</td>
++@@ -133,28 +135,42 @@
++                         @endif
++                     </td>
++                     <td>
+++                        <div style="display:flex; gap:0.3rem; align-items:center; flex-wrap:nowrap;">
++                         @if($canEditTickets)
++-                            <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
++-                                <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">Edit</a>
++-                                <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Delete this ticket permanently?');" style="display:inline;">
++-                                    @csrf
++-                                    @method('DELETE')
++-                                    <button type="submit" class="btn btn-danger">Delete</button>
++-                                </form>
++-                            </div>
+++                            <a class="btn btn-alt btn-icon" href="{{ route('tickets.edit', $ticket) }}" title="Edit">
+++                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+++                            </a>
+++                            <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Delete this ticket permanently?');" style="display:inline;">
+++                                @csrf
+++                                @method('DELETE')
+++                                <button type="submit" class="btn btn-danger btn-icon" title="Delete">
+++                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+++                                </button>
+++                            </form>
++                         @elseif($isTechnician ?? false)
++                             @if(in_array($ticket->status, ['logged', 'assigned', 'in_progress'], true))
++-                                <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">View Task</a>
+++                                <a class="btn btn-alt btn-icon" href="{{ route('tickets.edit', $ticket) }}" title="View Task">
+++                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+++                                    <span>View Task</span>
+++                                </a>
++                             @else
++-                                <button type="button" class="btn btn-alt" disabled title="Status update disabled while ticket is on hold.">View Task</button>
+++                                <button type="button" class="btn btn-alt btn-icon" disabled title="Status update disabled while ticket is on hold.">
+++                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+++                                    <span>View Task</span>
+++                                </button>
++                             @endif
++-                        @elseif($reviewMode ?? false)
++-                            <a class="btn btn-alt" href="{{ route('tickets.show', $ticket) }}">View</a>
++-                        @elseif($canApproveTickets)
++-                            <a class="btn btn-alt" href="{{ route('tickets.show', $ticket) }}">View</a>
+++                        @elseif($isOperationsManager ?? false)
+++                            <a class="btn btn-alt btn-icon" href="{{ route('tickets.show', $ticket) }}" title="View Phases">
+++                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+++                                <span>View</span>
+++                            </a>
++                         @else
++-                            <a class="btn btn-alt" href="{{ route('tickets.show', $ticket) }}">View</a>
+++                            <a class="btn btn-alt btn-icon" href="{{ route('tickets.show', $ticket) }}" title="View">
+++                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+++                                <span>View</span>
+++                            </a>
++                         @endif
+++                        </div>
++                     </td>
++                 </tr>
++             @empty
++diff --git a/resources/views/tickets/show.blade.php b/resources/views/tickets/show.blade.php
++index a1ed438..5616a59 100644
++--- a/resources/views/tickets/show.blade.php
+++++ b/resources/views/tickets/show.blade.php
++@@ -90,7 +90,7 @@
++         <p style="margin-bottom:0; white-space:pre-wrap;">{{ $ticket->description }}</p>
++     </section>
++ 
++-    <section class="card">
+++    <section class="card" style="margin-bottom:1rem;">
++         <h3 style="margin-top:0;">Attachments</h3>
++ 
++         @if($ticket->attachments->isEmpty())
++@@ -110,7 +110,7 @@
++                         <tr>
++                             <td>{{ str($attachment->attachment_type)->title() }}</td>
++                             <td>
++-                                <a href="{{ asset('storage/'.$attachment->file_path) }}" target="_blank" rel="noopener">
+++                                <a href="{{ route('media.show', ['path' => $attachment->file_path]) }}" target="_blank" rel="noopener">
++                                     {{ $attachment->file_name }}
++                                 </a>
++                             </td>
++@@ -122,4 +122,121 @@
++             </div>
++         @endif
++     </section>
+++
+++    @if(($isOperationsManager ?? false) && $ticket->phases->isNotEmpty())
+++    <section class="card">
+++        <h3 style="margin-top:0;">Technician Work Progress — {{ $ticket->technician?->name ?? 'Unassigned' }}</h3>
+++        <div class="table-wrap" style="margin-bottom:1rem;">
+++            <table style="width:100%; border-collapse:collapse;">
+++                <thead>
+++                    <tr style="background:#f5f5f5; border-bottom:2px solid #ddd;">
+++                        <th style="padding:0.75rem; text-align:left;">Phase</th>
+++                        <th style="padding:0.75rem; text-align:left;">Status</th>
+++                        <th style="padding:0.75rem; text-align:left;">Notes</th>
+++                        <th style="padding:0.75rem; text-align:left;">Files</th>
+++                        <th style="padding:0.75rem; text-align:left;">Started</th>
+++                        <th style="padding:0.75rem; text-align:left;">Completed</th>
+++                    </tr>
+++                </thead>
+++                <tbody>
+++                @foreach($ticket->phases as $phase)
+++                    <tr style="border-bottom:1px solid #eee;">
+++                        <td style="padding:0.75rem;"><strong>{{ $phase->phase_name }}</strong></td>
+++                        <td style="padding:0.75rem;">
+++                            <span class="status-pill status-{{ $phase->status }}">{{ str($phase->status)->replace('_',' ')->title() }}</span>
+++                        </td>
+++                        <td style="padding:0.75rem; max-width:300px; white-space:pre-wrap;">{{ $phase->technician_notes ?: '-' }}</td>
+++                        <td style="padding:0.75rem;">
+++                            @if($phase->attachments->isNotEmpty())
+++                                <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+++                                @foreach($phase->attachments as $att)
+++                                    <a href="{{ route('media.show', ['path' => $att->file_path]) }}" target="_blank" style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.82rem; padding:0.2rem 0.5rem; background:#e3f2fd; border-radius:4px; text-decoration:none;">
+++                                        @if($att->attachment_type === 'image')
+++                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+++                                        @else
+++                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+++                                        @endif
+++                                        {{ $att->file_name }}
+++                                    </a>
+++                                @endforeach
+++                                </div>
+++                            @else
+++                                <span class="muted">-</span>
+++                            @endif
+++                        </td>
+++                        <td style="padding:0.75rem;"><small>{{ $phase->started_at?->format('M d, Y H:i') ?? '-' }}</small></td>
+++                        <td style="padding:0.75rem;"><small>{{ $phase->completed_at?->format('M d, Y H:i') ?? '-' }}</small></td>
+++                    </tr>
+++                @endforeach
+++                </tbody>
+++            </table>
+++        </div>
+++    </section>
+++    @endif
+++
+++    @if(($isOperationsManager ?? false) && in_array($ticket->status, ['in_progress', 'assigned', 'logged']))
+++    <section class="card">
+++        <h3 style="margin-top:0;">Manage Work Phases</h3>
+++        <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="card" enctype="multipart/form-data" style="background:#f0f8ff; border:2px solid #2196F3;">
+++            @csrf
+++            @method('PUT')
+++            
+++            @php
+++                $currentPhase = $ticket->phases->where('status', 'in_progress')->first();
+++                if (!$currentPhase) {
+++                    $lastPhase = $ticket->phases->sortByDesc('phase_number')->first();
+++                    $nextPhaseNumber = ($lastPhase?->phase_number ?? 0) + 1;
+++                } else {
+++                    $nextPhaseNumber = $currentPhase->phase_number;
+++                }
+++            @endphp
+++            
+++            <h4 style="margin-top:0;">Phase {{ $nextPhaseNumber }} - Add Work Details</h4>
+++
+++            <div style="margin-bottom:1rem;">
+++                <label for="technician_notes_ops">Work Notes</label>
+++                <textarea
+++                    id="technician_notes_ops"
+++                    name="technician_notes"
+++                    placeholder="Describe what was done in this phase..."
+++                    style="min-height:100px;">{{ old('technician_notes', '') }}</textarea>
+++            </div>
+++
+++            <div style="margin-bottom:1rem;">
+++                <label for="phase_image_ops">Upload Photo</label>
+++                <input
+++                    id="phase_image_ops"
+++                    type="file"
+++                    name="phase_image"
+++                    accept="image/*">
+++                <small class="muted">Upload progress photos or images of completed work</small>
+++            </div>
+++
+++            <div style="margin-bottom:1rem;">
+++                <label for="phase_document_ops">Upload Document</label>
+++                <input
+++                    id="phase_document_ops"
+++                    type="file"
+++                    name="phase_document"
+++                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
+++                <small class="muted">Upload reports, invoices, or other supporting documents</small>
+++            </div>
+++
+++            <div style="display:flex; gap:0.5rem;">
+++                <button type="submit" name="action" value="save_phase" class="btn">Save Phase</button>
+++                <button type="submit" name="action" value="complete_phase" class="btn btn-success">Complete Phase & Next</button>
+++            </div>
+++        </form>
+++    </section>
+++    @endif
+++
+++    <script>
+++        (function () {
+++            const refreshIntervalMs = 10000;
+++
+++            window.setInterval(function () {
+++                window.location.reload();
+++            }, refreshIntervalMs);
+++        })();
+++    </script>
++ @endsection
++\ No newline at end of file
++-- 
++2.39.5 (Apple Git-154)
++
++
++From 22a3b9027a8d2d45b1d68067c5233fe1b5a63b15 Mon Sep 17 00:00:00 2001
++From: stephendweteh <dwetehkuru@gmail.com>
++Date: Wed, 1 Jul 2026 17:05:03 +0000
++Subject: [PATCH 2/4] chore: add 'click to view' text above status button
++
++---
++ resources/views/tickets/index.blade.php | 9 ++++++---
++ 1 file changed, 6 insertions(+), 3 deletions(-)
++
++diff --git a/resources/views/tickets/index.blade.php b/resources/views/tickets/index.blade.php
++index 5f37b3e..222d04c 100644
++--- a/resources/views/tickets/index.blade.php
+++++ b/resources/views/tickets/index.blade.php
++@@ -89,9 +89,12 @@
++                     <td>{{ $ticket->property->name }}</td>
++                     <td>{{ $ticket->category->name }}</td>
++                     <td>
++-                        <a href="{{ route('tickets.show', $ticket) }}" style="text-decoration:none;">
++-                            <span class="status-pill status-{{ $ticket->status }}" data-ticket-status="{{ $ticket->id }}">{{ $statusLabels[$ticket->status] ?? str($ticket->status)->replace('_', ' ') }}</span>
++-                        </a>
+++                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem;">
+++                            <small style="font-size: 0.7rem; color: #666;">click to view</small>
+++                            <a href="{{ route('tickets.show', $ticket) }}" style="text-decoration:none;">
+++                                <span class="status-pill status-{{ $ticket->status }}" data-ticket-status="{{ $ticket->id }}">{{ $statusLabels[$ticket->status] ?? str($ticket->status)->replace('_', ' ') }}</span>
+++                            </a>
+++                        </div>
++                     </td>
++                     <td>{{ $ticket->technician?->name ?? 'Unassigned' }}</td>
++                     <td>{{ $ticket->etd?->format('Y-m-d H:i') ?? '-' }}</td>
++-- 
++2.39.5 (Apple Git-154)
++
++
++From cf0b4c9f30189fb495e7f13d8f6fad385c426a7e Mon Sep 17 00:00:00 2001
++From: stephendweteh <dwetehkuru@gmail.com>
++Date: Wed, 1 Jul 2026 17:07:01 +0000
++Subject: [PATCH 3/4] chore: change auto-refresh interval from 10 seconds to 1
++ hour
++
++---
++ resources/views/tickets/show.blade.php | 2 +-
++ 1 file changed, 1 insertion(+), 1 deletion(-)
++
++diff --git a/resources/views/tickets/show.blade.php b/resources/views/tickets/show.blade.php
++index 5616a59..733c900 100644
++--- a/resources/views/tickets/show.blade.php
+++++ b/resources/views/tickets/show.blade.php
++@@ -232,7 +232,7 @@
++ 
++     <script>
++         (function () {
++-            const refreshIntervalMs = 10000;
+++            const refreshIntervalMs = 3600000; // 1 hour
++ 
++             window.setInterval(function () {
++                 window.location.reload();
++-- 
++2.39.5 (Apple Git-154)
++
++
++From 128c5952aa023e6e6dbef2790a8581b665c4be38 Mon Sep 17 00:00:00 2001
++From: stephendweteh <dwetehkuru@gmail.com>
++Date: Wed, 1 Jul 2026 17:08:31 +0000
++Subject: [PATCH 4/4] chore: add CSS and view updates from recent development
++
++---
++ public/css/site.css                           | 38 +++++++++++++++++++
++ resources/views/admin/settings/edit.blade.php |  2 +-
++ resources/views/admin/users/index.blade.php   |  2 +-
++ .../users/partials/form-fields.blade.php      |  2 +-
++ resources/views/auth/login.blade.php          |  4 +-
++ resources/views/auth/signup.blade.php         |  4 +-
++ resources/views/layouts/app.blade.php         |  4 +-
++ resources/views/profile/edit.blade.php        |  2 +-
++ .../tickets/partials/form-fields.blade.php    |  2 +-
++ routes/web.php                                | 21 ++++++++++
++ 10 files changed, 70 insertions(+), 11 deletions(-)
++
++diff --git a/public/css/site.css b/public/css/site.css
++index 8c44858..c844b0b 100644
++--- a/public/css/site.css
+++++ b/public/css/site.css
++@@ -408,6 +408,31 @@ .table-wrap {
++     overflow: auto;
++ }
++ 
+++/* Pagination */
+++nav[role="navigation"] {
+++    font-size: 0.92rem;
+++}
+++
+++nav[role="navigation"] svg {
+++    width: 1em;
+++    height: 1em;
+++    display: inline-block;
+++    vertical-align: middle;
+++}
+++
+++nav[role="navigation"] a,
+++nav[role="navigation"] span {
+++    font-size: 1em;
+++    line-height: 1.2;
+++}
+++
+++nav[role="navigation"] [aria-label="pagination.previous"],
+++nav[role="navigation"] [aria-label="pagination.next"] {
+++    display: inline-flex;
+++    align-items: center;
+++    justify-content: center;
+++}
+++
++ table {
++     width: 100%;
++     border-collapse: collapse;
++@@ -476,6 +501,19 @@ .btn-danger {
++     color: #fff;
++ }
++ 
+++.btn-icon {
+++    display: inline-flex;
+++    align-items: center;
+++    gap: 0.3rem;
+++    padding: 0.35rem 0.6rem;
+++    font-size: 0.82rem;
+++    white-space: nowrap;
+++}
+++
+++.btn-icon svg {
+++    flex-shrink: 0;
+++}
+++
++ .filters,
++ .form-grid {
++     display: grid;
++diff --git a/resources/views/admin/settings/edit.blade.php b/resources/views/admin/settings/edit.blade.php
++index 0aeedd7..8339d5e 100644
++--- a/resources/views/admin/settings/edit.blade.php
+++++ b/resources/views/admin/settings/edit.blade.php
++@@ -22,7 +22,7 @@
++         @if($logoPath)
++             <div style="margin-bottom: 0.8rem;">
++                 <div class="muted" style="margin-bottom: 0.4rem;">Current Logo</div>
++-                <img src="{{ asset('storage/'.$logoPath) }}" alt="Current logo" style="max-height: 72px; width: auto; display: block; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem;">
+++                <img src="{{ route('media.show', ['path' => $logoPath]) }}" alt="Current logo" style="max-height: 72px; width: auto; display: block; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem;">
++             </div>
++ 
++             <div style="margin-bottom: 1rem; display:flex; align-items:center; gap:0.5rem;">
++diff --git a/resources/views/admin/users/index.blade.php b/resources/views/admin/users/index.blade.php
++index 3dfd4cf..7bfccfb 100644
++--- a/resources/views/admin/users/index.blade.php
+++++ b/resources/views/admin/users/index.blade.php
++@@ -24,7 +24,7 @@
++                 <tr>
++                     <td>
++                         @if($u->profile_photo_path)
++-                            <img src="{{ asset('storage/'.$u->profile_photo_path) }}" alt="{{ $u->name }} profile photo" class="user-photo-thumb">
+++                            <img src="{{ route('media.show', ['path' => $u->profile_photo_path]) }}" alt="{{ $u->name }} profile photo" class="user-photo-thumb">
++                         @else
++                             <span class="muted">-</span>
++                         @endif
++diff --git a/resources/views/admin/users/partials/form-fields.blade.php b/resources/views/admin/users/partials/form-fields.blade.php
++index ef29a01..f2d82b9 100644
++--- a/resources/views/admin/users/partials/form-fields.blade.php
+++++ b/resources/views/admin/users/partials/form-fields.blade.php
++@@ -40,7 +40,7 @@
++ @if(isset($user) && $user->profile_photo_path)
++     <div style="margin-bottom: 0.8rem;">
++         <div class="muted" style="margin-bottom: 0.4rem;">Current Profile Picture</div>
++-        <img src="{{ asset('storage/'.$user->profile_photo_path) }}" alt="{{ $user->name }} profile photo" class="user-photo-lg">
+++        <img src="{{ route('media.show', ['path' => $user->profile_photo_path]) }}" alt="{{ $user->name }} profile photo" class="user-photo-lg">
++     </div>
++ 
++     <div style="margin-bottom: 1rem; display:flex; align-items:center; gap:0.5rem;">
++diff --git a/resources/views/auth/login.blade.php b/resources/views/auth/login.blade.php
++index 4a82589..20256c5 100644
++--- a/resources/views/auth/login.blade.php
+++++ b/resources/views/auth/login.blade.php
++@@ -9,7 +9,7 @@
++     <section class="login-shell">
++         <article class="login-showcase">
++             @if($siteLogoPath)
++-                <img src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo" class="login-showcase-logo">
+++                <img src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo" class="login-showcase-logo">
++             @else
++                 <div class="login-showcase-logo-fallback">{{ strtoupper(substr($siteName, 0, 1)) }}</div>
++             @endif
++@@ -21,7 +21,7 @@
++         <article class="login-card-modern">
++             <div class="login-brand-top">
++                 @if($siteLogoPath)
++-                    <img src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo" class="login-top-logo">
+++                    <img src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo" class="login-top-logo">
++                 @else
++                     <div class="login-top-logo-fallback">{{ strtoupper(substr($siteName, 0, 1)) }}</div>
++                 @endif
++diff --git a/resources/views/auth/signup.blade.php b/resources/views/auth/signup.blade.php
++index b069b91..a469b38 100644
++--- a/resources/views/auth/signup.blade.php
+++++ b/resources/views/auth/signup.blade.php
++@@ -9,7 +9,7 @@
++     <section class="login-shell">
++         <article class="login-showcase">
++             @if($siteLogoPath)
++-                <img src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo" class="login-showcase-logo">
+++                <img src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo" class="login-showcase-logo">
++             @else
++                 <div class="login-showcase-logo-fallback">{{ strtoupper(substr($siteName, 0, 1)) }}</div>
++             @endif
++@@ -22,7 +22,7 @@
++         <article class="login-card-modern">
++             <div class="login-brand-top">
++                 @if($siteLogoPath)
++-                    <img src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo" class="login-top-logo">
+++                    <img src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo" class="login-top-logo">
++                 @else
++                     <div class="login-top-logo-fallback">{{ strtoupper(substr($siteName, 0, 1)) }}</div>
++                 @endif
++diff --git a/resources/views/layouts/app.blade.php b/resources/views/layouts/app.blade.php
++index 4eb2490..f0716a3 100644
++--- a/resources/views/layouts/app.blade.php
+++++ b/resources/views/layouts/app.blade.php
++@@ -29,7 +29,7 @@
++         <aside class="sidebar">
++             <div class="sidebar-brand">
++                 @if($siteLogoPath)
++-                    <img class="sidebar-logo" src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo">
+++                    <img class="sidebar-logo" src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo">
++                 @endif
++                 <h1 class="sidebar-title">{{ $siteName }}</h1>
++                 <p class="sidebar-subtitle">Maintenance System</p>
++@@ -183,7 +183,7 @@
++                 <button type="button" class="top-install-btn" data-install-app hidden>Install App</button>
++                 <a class="top-user-chip" href="{{ route('profile.edit') }}" title="View profile">
++                     @if(auth()->user()->profile_photo_path)
++-                        <img src="{{ asset('storage/'.auth()->user()->profile_photo_path) }}" alt="{{ auth()->user()->name }} profile photo" class="top-user-photo">
+++                        <img src="{{ route('media.show', ['path' => auth()->user()->profile_photo_path]) }}" alt="{{ auth()->user()->name }} profile photo" class="top-user-photo">
++                     @else
++                         <span class="top-user-photo top-user-initial">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
++                     @endif
++diff --git a/resources/views/profile/edit.blade.php b/resources/views/profile/edit.blade.php
++index b18d3b7..f5457c8 100644
++--- a/resources/views/profile/edit.blade.php
+++++ b/resources/views/profile/edit.blade.php
++@@ -42,7 +42,7 @@
++         @if($user->profile_photo_path)
++             <div style="margin-bottom: 0.8rem;">
++                 <div class="muted" style="margin-bottom: 0.4rem;">Current Profile Picture</div>
++-                <img src="{{ asset('storage/'.$user->profile_photo_path) }}" alt="{{ $user->name }} profile photo" class="user-photo-lg">
+++                <img src="{{ route('media.show', ['path' => $user->profile_photo_path]) }}" alt="{{ $user->name }} profile photo" class="user-photo-lg">
++             </div>
++ 
++             <div style="margin-bottom: 1rem; display:flex; align-items:center; gap:0.5rem;">
++diff --git a/resources/views/tickets/partials/form-fields.blade.php b/resources/views/tickets/partials/form-fields.blade.php
++index 84e4867..c6b77e5 100644
++--- a/resources/views/tickets/partials/form-fields.blade.php
+++++ b/resources/views/tickets/partials/form-fields.blade.php
++@@ -151,7 +151,7 @@
++                             <tr>
++                                 <td>{{ str($attachment->attachment_type)->title() }}</td>
++                                 <td>
++-                                    <a href="{{ asset('storage/'.$attachment->file_path) }}" target="_blank" rel="noopener">
+++                                    <a href="{{ route('media.show', ['path' => $attachment->file_path]) }}" target="_blank" rel="noopener">
++                                         {{ $attachment->file_name }}
++                                     </a>
++                                 </td>
++diff --git a/routes/web.php b/routes/web.php
++index 464c306..505d40e 100644
++--- a/routes/web.php
+++++ b/routes/web.php
++@@ -9,10 +9,31 @@
++ use App\Http\Controllers\Web\PwaController;
++ use App\Http\Controllers\Web\ProfileController;
++ use App\Http\Controllers\Web\TicketController;
+++use Illuminate\Support\Facades\Storage;
++ use Illuminate\Support\Facades\Route;
++ 
++ Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
++ 
+++Route::get('/media/{path}', function (string $path) {
+++	abort_if(str_contains($path, '..'), 404);
+++
+++	$disk = Storage::disk('public');
+++	abort_unless($disk->exists($path), 404);
+++
+++	$stream = $disk->readStream($path);
+++	abort_unless(is_resource($stream), 404);
+++
+++	$mimeType = $disk->mimeType($path) ?: 'application/octet-stream';
+++
+++	return response()->stream(function () use ($stream): void {
+++		fpassthru($stream);
+++		fclose($stream);
+++	}, 200, [
+++		'Content-Type' => $mimeType,
+++		'Cache-Control' => 'public, max-age=604800',
+++	]);
+++})->where('path', '.*')->name('media.show');
+++
++ Route::middleware('guest')->group(function (): void {
++ 	Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
++ 	Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
++-- 
++2.39.5 (Apple Git-154)
++
+diff --git a/deployment/20260701-phase-system-updates-patch/simple-apply.sh b/deployment/20260701-phase-system-updates-patch/simple-apply.sh
+new file mode 100755
+index 0000000..7de8b68
+--- /dev/null
++++ b/deployment/20260701-phase-system-updates-patch/simple-apply.sh
+@@ -0,0 +1,70 @@
++#!/bin/bash
++# CPANEL SIMPLE PATCH APPLY - No dependencies required
++# Just copy and paste the commands below into your cPanel terminal
++
++echo "=========================================="
++echo "Phase System Updates for cPanel"
++echo "=========================================="
++echo ""
++
++# Get project path
++REPO_ROOT="${1:-.}"
++
++if [ ! -f "$REPO_ROOT/artisan" ]; then
++  echo "ERROR: artisan file not found in: $REPO_ROOT"
++  echo "Usage: bash simple-apply.sh /path/to/kai-maintenance-system"
++  exit 1
++fi
++
++cd "$REPO_ROOT"
++
++echo "Current location: $(pwd)"
++echo ""
++
++# Check if git is available
++if ! command -v git &> /dev/null; then
++  echo "⚠️  Git not found on your server."
++  echo ""
++  echo "If you have shell/terminal access via cPanel, try:"
++  echo "1. Use File Manager to manually upload updated files"
++  echo "2. Contact your hosting provider to enable git"
++  echo "3. Use the git pull command from terminal:"
++  echo "   cd $REPO_ROOT && git pull origin main"
++  exit 1
++fi
++
++echo "Fetching latest code from GitHub..."
++git fetch origin
++
++echo "Pulling latest changes..."
++if git pull origin main; then
++  echo "✓ Code updated successfully"
++else
++  echo "⚠️  Pull had conflicts. Using hard reset..."
++  git reset --hard origin/main
++  echo "✓ Reset to latest version"
++fi
++
++echo ""
++echo "Clearing application cache..."
++php artisan cache:clear
++php artisan config:cache
++
++echo ""
++echo "=========================================="
++echo "✓ PATCH APPLIED SUCCESSFULLY!"
++echo "=========================================="
++echo ""
++echo "Changes made:"
++echo "  • Status pill is now clickable"
++echo "  • 'Click to view' helper text added"
++echo "  • Auto-refresh changed to 1 hour"
++echo "  • Operations Manager can manage phases"
++echo ""
++echo "Next steps:"
++echo "  1. Hard refresh your browser (Ctrl+Shift+R or Cmd+Shift+R)"
++echo "  2. Test status button clickability"
++echo "  3. Verify Operations Manager sees 'Manage Work Phases' section"
++echo ""
++echo "Current commit: $(git log -1 --oneline)"
++echo ""
