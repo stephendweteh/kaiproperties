@@ -40,6 +40,7 @@ class Ticket extends Model
         'completed_at',
         'closed_at',
         'requires_additional_cost',
+        'current_phase',
     ];
 
     protected $casts = [
@@ -88,5 +89,10 @@ class Ticket extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(TicketAttachment::class)->latest();
+    }
+
+    public function phases(): HasMany
+    {
+        return $this->hasMany(TicketPhase::class)->orderBy('phase_number');
     }
 }

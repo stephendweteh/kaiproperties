@@ -108,8 +108,8 @@
                             @if($imageAttachments->isNotEmpty())
                                 <div class="ticket-attachment-thumbs">
                                     @foreach($imageAttachments as $attachment)
-                                        <a href="{{ asset('storage/'.$attachment->file_path) }}" target="_blank" rel="noopener" title="{{ $attachment->file_name }}">
-                                            <img src="{{ asset('storage/'.$attachment->file_path) }}" alt="{{ $attachment->file_name }}" loading="lazy">
+                                        <a href="{{ route('media.show', ['path' => $attachment->file_path]) }}" target="_blank" rel="noopener" title="{{ $attachment->file_name }}">
+                                            <img src="{{ route('media.show', ['path' => $attachment->file_path]) }}" alt="{{ $attachment->file_name }}" loading="lazy">
                                         </a>
                                     @endforeach
                                     @if($hiddenImages > 0)
@@ -121,7 +121,7 @@
                             @if($documentAttachments->isNotEmpty())
                                 <div class="ticket-attachment-docs">
                                     @foreach($documentAttachments as $attachment)
-                                        <a href="{{ asset('storage/'.$attachment->file_path) }}" target="_blank" rel="noopener" download>
+                                        <a href="{{ route('media.show', ['path' => $attachment->file_path]) }}" target="_blank" rel="noopener" download>
                                             {{ $attachment->file_name }}
                                         </a>
                                     @endforeach
@@ -144,9 +144,9 @@
                             </div>
                         @elseif($isTechnician ?? false)
                             @if(in_array($ticket->status, ['logged', 'assigned', 'in_progress'], true))
-                                <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">Update Status</a>
+                                <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">View Task</a>
                             @else
-                                <button type="button" class="btn btn-alt" disabled title="Status update disabled while ticket is on hold.">Update Status</button>
+                                <button type="button" class="btn btn-alt" disabled title="Status update disabled while ticket is on hold.">View Task</button>
                             @endif
                         @elseif($reviewMode ?? false)
                             <a class="btn btn-alt" href="{{ route('tickets.show', $ticket) }}">View</a>

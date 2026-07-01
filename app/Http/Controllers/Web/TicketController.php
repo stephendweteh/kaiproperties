@@ -179,7 +179,7 @@ class TicketController extends Controller
 
         $reviewMode = $this->canApproveTickets($user) && ! $this->canEditTickets($user);
 
-        $ticket->load(['reporter:id,name', 'technician:id,name', 'attachments.uploader:id,name']);
+        $ticket->load(['reporter:id,name', 'technician:id,name', 'attachments.uploader:id,name', 'phases.attachments.uploader:id,name']);
 
         return view('tickets.edit', [
             'ticket' => $ticket,
@@ -189,6 +189,7 @@ class TicketController extends Controller
             'statuses' => $technicianMode ? ['in_progress', 'completed'] : Ticket::STATUSES,
             'technicianMode' => $technicianMode,
             'reviewMode' => $reviewMode,
+            'isOperationsManager' => $user->hasRole(User::ROLE_OPERATIONS_MANAGER),
             'technicians' => User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
         ]);
     }
@@ -205,6 +206,100 @@ class TicketController extends Controller
         abort_unless($canEditTickets || $canApproveTickets || $canTechnicianUpdate, 403);
 
         if ($canTechnicianUpdate && ! $canEditTickets && ! $canApproveTickets) {
+            $action = $request->input('action', 'update_status');
+
+            // Operations Manager marks ticket as completed
+            if ($action === 'mark_completed') {
+                if (! $ticket->started_at) {
+                    $ticket->started_at = now();
+                }
+                $ticket->status = 'completed';
+                $ticket->completed_at = now();
+                $ticket->save();
+
+                $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
+
+                return redirect()
+                    ->route('tickets.index')
+                    ->with('success', 'Ticket marked as completed.');
+            }
+
+            // Handle phase-based updates
+            if (in_array($action, ['save_phase', 'complete_phase'])) {
+                $validated = $request->validate([
+                    'technician_notes' => ['nullable', 'string'],
+                    'phase_image' => ['nullable', 'image', 'max:5120'],
+                    'phase_document' => ['nullable', 'file', 'max:10240'],
+                ]);
+
+                // Get or create current phase
+                $currentPhase = $ticket->phases()
+                    ->where('status', 'in_progress')
+                    ->first();
+
+                if (!$currentPhase) {
+                    $nextPhaseNumber = $ticket->phases()->max('phase_number') ?? 0;
+                    $nextPhaseNumber++;
+
+                    $currentPhase = $ticket->phases()->create([
+                        'phase_name' => "Phase {$nextPhaseNumber}",
+                        'phase_number' => $nextPhaseNumber,
+                        'status' => 'in_progress',
+                        'started_at' => now(),
+                    ]);
+                }
+
+                // Update phase notes
+                if ($validated['technician_notes']) {
+                    $currentPhase->update(['technician_notes' => $validated['technician_notes']]);
+                }
+
+                // Handle file uploads
+                if ($request->hasFile('phase_image')) {
+                    $file = $request->file('phase_image');
+                    $path = $file->store('ticket-phases', 'public');
+
+                    $currentPhase->attachments()->create([
+                        'uploaded_by' => $user->id,
+                        'file_path' => $path,
+                        'file_name' => $file->getClientOriginalName(),
+                        'mime_type' => $file->getMimeType(),
+                        'file_size' => $file->getSize(),
+                        'attachment_type' => 'image',
+                    ]);
+                }
+
+                if ($request->hasFile('phase_document')) {
+                    $file = $request->file('phase_document');
+                    $path = $file->store('ticket-phases', 'public');
+
+                    $currentPhase->attachments()->create([
+                        'uploaded_by' => $user->id,
+                        'file_path' => $path,
+                        'file_name' => $file->getClientOriginalName(),
+                        'mime_type' => $file->getMimeType(),
+                        'file_size' => $file->getSize(),
+                        'attachment_type' => 'document',
+                    ]);
+                }
+
+                // If completing phase, mark it as completed
+                if ($action === 'complete_phase') {
+                    $currentPhase->markAsCompleted();
+                    $ticket->current_phase = $currentPhase->phase_number + 1;
+                    $ticket->status = 'in_progress';
+                } else {
+                    $ticket->status = 'in_progress';
+                }
+
+                $ticket->save();
+
+                return redirect()
+                    ->route('tickets.edit', $ticket)
+                    ->with('success', 'Phase saved successfully.');
+            }
+
+            // Standard status update (non-phase)
             $validated = $request->validate([
                 'status' => ['required', 'in:in_progress,completed'],
             ]);
@@ -379,7 +474,7 @@ class TicketController extends Controller
         $previousStatus = $ticket->status;
         $previousAssignedTo = (int) ($ticket->assigned_to ?? 0);
 
-        abort_unless($canApproveTickets && ! $canEditTickets, 403);
+        abort_unless($canApproveTickets, 403);
 
         $validated = $request->validate([
             'assigned_to' => ['nullable', 'exists:users,id'],
@@ -519,7 +614,10 @@ class TicketController extends Controller
 
     private function canEditTickets(?User $user): bool
     {
-        return (bool) $user?->hasRole(User::ROLE_ADMIN);
+        return (bool) $user?->hasRole([
+            User::ROLE_ADMIN,
+            User::ROLE_OPERATIONS_MANAGER,
+        ]);
     }
 
     private function canCreateTickets(?User $user): bool

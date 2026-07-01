@@ -1,7 +1,7 @@
-@extends('layouts.app', ['title' => ($reviewMode ?? false) ? 'Approve Ticket' : 'Edit Ticket'])
+@extends('layouts.app', ['title' => ($reviewMode ?? false) ? 'Approve Ticket' : (($technicianMode ?? false) ? 'Ticket' : 'Edit Ticket')])
 
 @section('content')
-    <h2>{{ ($reviewMode ?? false) ? 'Approve Ticket' : 'Edit Ticket' }} {{ $ticket->ticket_no }}</h2>
+    <h2>{{ ($reviewMode ?? false) ? 'Approve Ticket' : (($technicianMode ?? false) ? 'Ticket' : 'Edit Ticket') }} {{ $ticket->ticket_no }}</h2>
 
     <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="card" enctype="multipart/form-data">
         @csrf
@@ -56,44 +56,20 @@
                 <textarea disabled>{{ $ticket->description }}</textarea>
             </div>
         @elseif($technicianMode ?? false)
-            <div class="form-grid">
-                <div>
-                    <label>Title</label>
-                    <input type="text" value="{{ $ticket->title }}" disabled>
-                </div>
-                <div>
-                    <label>Current Status</label>
-                    <input type="text" value="{{ $ticket->status === 'logged' ? 'Logged/New' : str($ticket->status)->replace('_', ' ')->title() }}" disabled>
-                </div>
-                <div>
-                    <label for="status">New Status</label>
-                    <select id="status" name="status" required>
-                        <option value="in_progress" @selected(old('status') === 'in_progress')>In Progress</option>
-                        <option value="completed" @selected(old('status') === 'completed')>Completed</option>
-                    </select>
-                </div>
-                <div>
-                    <label>Property</label>
-                    <input type="text" value="{{ $ticket->property->name }}" disabled>
-                </div>
-                <div>
-                    <label>Category</label>
-                    <input type="text" value="{{ $ticket->category->name }}" disabled>
-                </div>
-                <div>
-                    <label>Assigned Technician</label>
-                    <input type="text" value="{{ $ticket->technician?->name ?? '-' }}" disabled>
-                </div>
-            </div>
-
-            <div style="margin-bottom: 1rem;">
-                <label>Description</label>
-                <textarea disabled>{{ $ticket->description }}</textarea>
-            </div>
+            @include('tickets.partials.technician-form')
         @else
             @include('tickets.partials.form-fields', ['editMode' => true])
         @endif
 
-        <button type="submit">{{ ($reviewMode ?? false) ? 'Submit Decision' : (($technicianMode ?? false) ? 'Update Status' : 'Update Ticket') }}</button>
+        @if($technicianMode ?? false)
+            @if($isOperationsManager ?? false)
+                <input type="hidden" name="action" value="mark_completed">
+                <button type="submit" class="btn btn-success">Executed</button>
+            @else
+                {{-- Technician phase buttons are already inside the technician-form partial --}}
+            @endif
+        @else
+            <button type="submit">{{ ($reviewMode ?? false) ? 'Submit Decision' : 'Update Status' }}</button>
+        @endif
     </form>
 @endsection
