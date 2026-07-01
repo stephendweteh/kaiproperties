@@ -29,7 +29,7 @@
         <aside class="sidebar">
             <div class="sidebar-brand">
                 @if($siteLogoPath)
-                    <img class="sidebar-logo" src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo">
+                    <img class="sidebar-logo" src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo">
                 @endif
                 <h1 class="sidebar-title">{{ $siteName }}</h1>
                 <p class="sidebar-subtitle">Maintenance System</p>
@@ -183,7 +183,7 @@
                 <button type="button" class="top-install-btn" data-install-app hidden>Install App</button>
                 <a class="top-user-chip" href="{{ route('profile.edit') }}" title="View profile">
                     @if(auth()->user()->profile_photo_path)
-                        <img src="{{ asset('storage/'.auth()->user()->profile_photo_path) }}" alt="{{ auth()->user()->name }} profile photo" class="top-user-photo">
+                        <img src="{{ route('media.show', ['path' => auth()->user()->profile_photo_path]) }}" alt="{{ auth()->user()->name }} profile photo" class="top-user-photo">
                     @else
                         <span class="top-user-photo top-user-initial">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
                     @endif

@@ -151,7 +151,7 @@
                             <tr>
                                 <td>{{ str($attachment->attachment_type)->title() }}</td>
                                 <td>
-                                    <a href="{{ asset('storage/'.$attachment->file_path) }}" target="_blank" rel="noopener">
+                                    <a href="{{ route('media.show', ['path' => $attachment->file_path]) }}" target="_blank" rel="noopener">
                                         {{ $attachment->file_name }}
                                     </a>
                                 </td>

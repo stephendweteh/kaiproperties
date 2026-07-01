@@ -42,7 +42,7 @@
         @if($user->profile_photo_path)
             <div style="margin-bottom: 0.8rem;">
                 <div class="muted" style="margin-bottom: 0.4rem;">Current Profile Picture</div>
-                <img src="{{ asset('storage/'.$user->profile_photo_path) }}" alt="{{ $user->name }} profile photo" class="user-photo-lg">
+                <img src="{{ route('media.show', ['path' => $user->profile_photo_path]) }}" alt="{{ $user->name }} profile photo" class="user-photo-lg">
             </div>
 
             <div style="margin-bottom: 1rem; display:flex; align-items:center; gap:0.5rem;">

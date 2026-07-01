@@ -22,7 +22,7 @@
         @if($logoPath)
             <div style="margin-bottom: 0.8rem;">
                 <div class="muted" style="margin-bottom: 0.4rem;">Current Logo</div>
-                <img src="{{ asset('storage/'.$logoPath) }}" alt="Current logo" style="max-height: 72px; width: auto; display: block; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem;">
+                <img src="{{ route('media.show', ['path' => $logoPath]) }}" alt="Current logo" style="max-height: 72px; width: auto; display: block; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem;">
             </div>
 
             <div style="margin-bottom: 1rem; display:flex; align-items:center; gap:0.5rem;">

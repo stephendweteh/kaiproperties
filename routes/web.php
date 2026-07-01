@@ -9,9 +9,30 @@ use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\PwaController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\TicketController;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
+
+Route::get('/media/{path}', function (string $path) {
+	abort_if(str_contains($path, '..'), 404);
+
+	$disk = Storage::disk('public');
+	abort_unless($disk->exists($path), 404);
+
+	$stream = $disk->readStream($path);
+	abort_unless(is_resource($stream), 404);
+
+	$mimeType = $disk->mimeType($path) ?: 'application/octet-stream';
+
+	return response()->stream(function () use ($stream): void {
+		fpassthru($stream);
+		fclose($stream);
+	}, 200, [
+		'Content-Type' => $mimeType,
+		'Cache-Control' => 'public, max-age=604800',
+	]);
+})->where('path', '.*')->name('media.show');
 
 Route::middleware('guest')->group(function (): void {
 	Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');

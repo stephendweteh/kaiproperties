@@ -9,7 +9,7 @@
     <section class="login-shell">
         <article class="login-showcase">
             @if($siteLogoPath)
-                <img src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo" class="login-showcase-logo">
+                <img src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo" class="login-showcase-logo">
             @else
                 <div class="login-showcase-logo-fallback">{{ strtoupper(substr($siteName, 0, 1)) }}</div>
             @endif
@@ -21,7 +21,7 @@
         <article class="login-card-modern">
             <div class="login-brand-top">
                 @if($siteLogoPath)
-                    <img src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo" class="login-top-logo">
+                    <img src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo" class="login-top-logo">
                 @else
                     <div class="login-top-logo-fallback">{{ strtoupper(substr($siteName, 0, 1)) }}</div>
                 @endif

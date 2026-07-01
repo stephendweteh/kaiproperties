@@ -24,7 +24,7 @@
                 <tr>
                     <td>
                         @if($u->profile_photo_path)
-                            <img src="{{ asset('storage/'.$u->profile_photo_path) }}" alt="{{ $u->name }} profile photo" class="user-photo-thumb">
+                            <img src="{{ route('media.show', ['path' => $u->profile_photo_path]) }}" alt="{{ $u->name }} profile photo" class="user-photo-thumb">
                         @else
                             <span class="muted">-</span>
                         @endif

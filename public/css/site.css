@@ -408,6 +408,31 @@ body {
     overflow: auto;
 }
 
+/* Pagination */
+nav[role="navigation"] {
+    font-size: 0.92rem;
+}
+
+nav[role="navigation"] svg {
+    width: 1em;
+    height: 1em;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+nav[role="navigation"] a,
+nav[role="navigation"] span {
+    font-size: 1em;
+    line-height: 1.2;
+}
+
+nav[role="navigation"] [aria-label="pagination.previous"],
+nav[role="navigation"] [aria-label="pagination.next"] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -474,6 +499,19 @@ button:hover,
 .btn-danger {
     background: var(--danger);
     color: #fff;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+
+.btn-icon svg {
+    flex-shrink: 0;
 }
 
 .filters,
