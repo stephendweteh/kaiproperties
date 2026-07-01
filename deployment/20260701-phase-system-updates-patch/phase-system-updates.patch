@@ -1,0 +1,656 @@
+From 9cfc66cbd1b3b3b4834200107c37aeb567f1589c Mon Sep 17 00:00:00 2001
+From: stephendweteh <dwetehkuru@gmail.com>
+Date: Wed, 1 Jul 2026 17:02:47 +0000
+Subject: [PATCH 1/4] feat: make status clickable and allow ops manager to
+ manage phases
+
+- Status pill in ticket list is now a clickable button that opens ticket detail
+- Operations Manager can view all phases in ticket detail view
+- Operations Manager can add/manage phases from the show view (when ticket is in progress/assigned/logged)
+- Phase form available in show view with same interface as technician
+- Redirect operations managers to show view after phase save
+- Only technicians can update status without phase action
+---
+ app/Http/Controllers/Web/TicketController.php |  61 +++++----
+ resources/views/tickets/index.blade.php       |  48 ++++---
+ resources/views/tickets/show.blade.php        | 121 +++++++++++++++++-
+ 3 files changed, 189 insertions(+), 41 deletions(-)
+
+diff --git a/app/Http/Controllers/Web/TicketController.php b/app/Http/Controllers/Web/TicketController.php
+index f6cd55d..75cd298 100644
+--- a/app/Http/Controllers/Web/TicketController.php
++++ b/app/Http/Controllers/Web/TicketController.php
+@@ -70,6 +70,7 @@ public function index(Request $request)
+             'canEditTickets' => $canEditTickets,
+             'canCreateTickets' => $canCreateTickets,
+             'reviewMode' => $reviewMode,
++            'isOperationsManager' => $user?->hasRole(User::ROLE_OPERATIONS_MANAGER) ?? false,
+             'technicians' => ($isReporterScopedRole || $isTechnician)
+                 ? collect()
+                 : User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
+@@ -109,6 +110,7 @@ public function show(Ticket $ticket)
+             'reporter:id,name',
+             'technician:id,name',
+             'attachments.uploader:id,name',
++            'phases.attachments.uploader:id,name',
+         ]);
+ 
+         return view('tickets.show', [
+@@ -116,6 +118,7 @@ public function show(Ticket $ticket)
+             'canEditTickets' => $this->canEditTickets($user),
+             'canApproveTickets' => $canApproveTickets,
+             'canTechnicianUpdate' => $this->canTechnicianUpdateStatus($user, $ticket),
++            'isOperationsManager' => $user->hasRole(User::ROLE_OPERATIONS_MANAGER),
+             'technicians' => $canApproveTickets
+                 ? User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get()
+                 : collect(),
+@@ -203,9 +206,11 @@ public function update(Request $request, Ticket $ticket)
+         $previousStatus = $ticket->status;
+         $previousAssignedTo = (int) ($ticket->assigned_to ?? 0);
+ 
+-        abort_unless($canEditTickets || $canApproveTickets || $canTechnicianUpdate, 403);
++        abort_unless($canEditTickets || $canApproveTickets || $canTechnicianUpdate || $user->hasRole(User::ROLE_OPERATIONS_MANAGER), 403);
++
++        $isOperationsManager = $user->hasRole(User::ROLE_OPERATIONS_MANAGER);
+ 
+-        if ($canTechnicianUpdate && ! $canEditTickets && ! $canApproveTickets) {
++        if (($canTechnicianUpdate || $isOperationsManager) && ! $canEditTickets && ! $canApproveTickets) {
+             $action = $request->input('action', 'update_status');
+ 
+             // Operations Manager marks ticket as completed
+@@ -294,38 +299,48 @@ public function update(Request $request, Ticket $ticket)
+ 
+                 $ticket->save();
+ 
+-                return redirect()
+-                    ->route('tickets.edit', $ticket)
++                $redirectRoute = $isOperationsManager ? route('tickets.show', $ticket) : route('tickets.edit', $ticket);
++                
++                return redirect($redirectRoute)
+                     ->with('success', 'Phase saved successfully.');
+             }
+ 
+-            // Standard status update (non-phase)
+-            $validated = $request->validate([
+-                'status' => ['required', 'in:in_progress,completed'],
+-            ]);
+-
+-            if ($validated['status'] === 'in_progress' && ! $ticket->started_at) {
+-                $ticket->started_at = now();
+-            }
++            // Standard status update (non-phase) - only for technicians
++            if (!$isOperationsManager) {
++                $validated = $request->validate([
++                    'status' => ['required', 'in:in_progress,completed'],
++                ]);
+ 
+-            if ($validated['status'] === 'completed') {
+-                if (! $ticket->started_at) {
++                if ($validated['status'] === 'in_progress' && ! $ticket->started_at) {
+                     $ticket->started_at = now();
+                 }
+ 
+-                $ticket->completed_at = now();
+-            }
++                if ($validated['status'] === 'completed') {
++                    if (! $ticket->started_at) {
++                        $ticket->started_at = now();
++                    }
+ 
+-            $ticket->status = $validated['status'];
+-            $ticket->save();
++                    $ticket->completed_at = now();
++                }
+ 
+-            if ($previousStatus !== $ticket->status) {
+-                $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
+-            }
++                $ticket->status = $validated['status'];
++                $ticket->save();
++
++                if ($previousStatus !== $ticket->status) {
++                    $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
++                }
+ 
++                return redirect()
++                    ->route('tickets.index')
++                    ->with('success', 'Ticket status updated successfully.');
++            }
++        }
++        
++        if ($isOperationsManager) {
++            // Operations manager attempted to update without phase action
+             return redirect()
+-                ->route('tickets.index')
+-                ->with('success', 'Ticket status updated successfully.');
++                ->route('tickets.show', $ticket)
++                ->with('error', 'Invalid action.');
+         }
+ 
+         if ($canApproveTickets && ! $canEditTickets) {
+diff --git a/resources/views/tickets/index.blade.php b/resources/views/tickets/index.blade.php
+index 1ee9a24..5f37b3e 100644
+--- a/resources/views/tickets/index.blade.php
++++ b/resources/views/tickets/index.blade.php
+@@ -89,7 +89,9 @@
+                     <td>{{ $ticket->property->name }}</td>
+                     <td>{{ $ticket->category->name }}</td>
+                     <td>
+-                        <span class="status-pill status-{{ $ticket->status }}" data-ticket-status="{{ $ticket->id }}">{{ $statusLabels[$ticket->status] ?? str($ticket->status)->replace('_', ' ') }}</span>
++                        <a href="{{ route('tickets.show', $ticket) }}" style="text-decoration:none;">
++                            <span class="status-pill status-{{ $ticket->status }}" data-ticket-status="{{ $ticket->id }}">{{ $statusLabels[$ticket->status] ?? str($ticket->status)->replace('_', ' ') }}</span>
++                        </a>
+                     </td>
+                     <td>{{ $ticket->technician?->name ?? 'Unassigned' }}</td>
+                     <td>{{ $ticket->etd?->format('Y-m-d H:i') ?? '-' }}</td>
+@@ -133,28 +135,42 @@
+                         @endif
+                     </td>
+                     <td>
++                        <div style="display:flex; gap:0.3rem; align-items:center; flex-wrap:nowrap;">
+                         @if($canEditTickets)
+-                            <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+-                                <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">Edit</a>
+-                                <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Delete this ticket permanently?');" style="display:inline;">
+-                                    @csrf
+-                                    @method('DELETE')
+-                                    <button type="submit" class="btn btn-danger">Delete</button>
+-                                </form>
+-                            </div>
++                            <a class="btn btn-alt btn-icon" href="{{ route('tickets.edit', $ticket) }}" title="Edit">
++                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
++                            </a>
++                            <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Delete this ticket permanently?');" style="display:inline;">
++                                @csrf
++                                @method('DELETE')
++                                <button type="submit" class="btn btn-danger btn-icon" title="Delete">
++                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
++                                </button>
++                            </form>
+                         @elseif($isTechnician ?? false)
+                             @if(in_array($ticket->status, ['logged', 'assigned', 'in_progress'], true))
+-                                <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">View Task</a>
++                                <a class="btn btn-alt btn-icon" href="{{ route('tickets.edit', $ticket) }}" title="View Task">
++                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
++                                    <span>View Task</span>
++                                </a>
+                             @else
+-                                <button type="button" class="btn btn-alt" disabled title="Status update disabled while ticket is on hold.">View Task</button>
++                                <button type="button" class="btn btn-alt btn-icon" disabled title="Status update disabled while ticket is on hold.">
++                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
++                                    <span>View Task</span>
++                                </button>
+                             @endif
+-                        @elseif($reviewMode ?? false)
+-                            <a class="btn btn-alt" href="{{ route('tickets.show', $ticket) }}">View</a>
+-                        @elseif($canApproveTickets)
+-                            <a class="btn btn-alt" href="{{ route('tickets.show', $ticket) }}">View</a>
++                        @elseif($isOperationsManager ?? false)
++                            <a class="btn btn-alt btn-icon" href="{{ route('tickets.show', $ticket) }}" title="View Phases">
++                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
++                                <span>View</span>
++                            </a>
+                         @else
+-                            <a class="btn btn-alt" href="{{ route('tickets.show', $ticket) }}">View</a>
++                            <a class="btn btn-alt btn-icon" href="{{ route('tickets.show', $ticket) }}" title="View">
++                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
++                                <span>View</span>
++                            </a>
+                         @endif
++                        </div>
+                     </td>
+                 </tr>
+             @empty
+diff --git a/resources/views/tickets/show.blade.php b/resources/views/tickets/show.blade.php
+index a1ed438..5616a59 100644
+--- a/resources/views/tickets/show.blade.php
++++ b/resources/views/tickets/show.blade.php
+@@ -90,7 +90,7 @@
+         <p style="margin-bottom:0; white-space:pre-wrap;">{{ $ticket->description }}</p>
+     </section>
+ 
+-    <section class="card">
++    <section class="card" style="margin-bottom:1rem;">
+         <h3 style="margin-top:0;">Attachments</h3>
+ 
+         @if($ticket->attachments->isEmpty())
+@@ -110,7 +110,7 @@
+                         <tr>
+                             <td>{{ str($attachment->attachment_type)->title() }}</td>
+                             <td>
+-                                <a href="{{ asset('storage/'.$attachment->file_path) }}" target="_blank" rel="noopener">
++                                <a href="{{ route('media.show', ['path' => $attachment->file_path]) }}" target="_blank" rel="noopener">
+                                     {{ $attachment->file_name }}
+                                 </a>
+                             </td>
+@@ -122,4 +122,121 @@
+             </div>
+         @endif
+     </section>
++
++    @if(($isOperationsManager ?? false) && $ticket->phases->isNotEmpty())
++    <section class="card">
++        <h3 style="margin-top:0;">Technician Work Progress — {{ $ticket->technician?->name ?? 'Unassigned' }}</h3>
++        <div class="table-wrap" style="margin-bottom:1rem;">
++            <table style="width:100%; border-collapse:collapse;">
++                <thead>
++                    <tr style="background:#f5f5f5; border-bottom:2px solid #ddd;">
++                        <th style="padding:0.75rem; text-align:left;">Phase</th>
++                        <th style="padding:0.75rem; text-align:left;">Status</th>
++                        <th style="padding:0.75rem; text-align:left;">Notes</th>
++                        <th style="padding:0.75rem; text-align:left;">Files</th>
++                        <th style="padding:0.75rem; text-align:left;">Started</th>
++                        <th style="padding:0.75rem; text-align:left;">Completed</th>
++                    </tr>
++                </thead>
++                <tbody>
++                @foreach($ticket->phases as $phase)
++                    <tr style="border-bottom:1px solid #eee;">
++                        <td style="padding:0.75rem;"><strong>{{ $phase->phase_name }}</strong></td>
++                        <td style="padding:0.75rem;">
++                            <span class="status-pill status-{{ $phase->status }}">{{ str($phase->status)->replace('_',' ')->title() }}</span>
++                        </td>
++                        <td style="padding:0.75rem; max-width:300px; white-space:pre-wrap;">{{ $phase->technician_notes ?: '-' }}</td>
++                        <td style="padding:0.75rem;">
++                            @if($phase->attachments->isNotEmpty())
++                                <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
++                                @foreach($phase->attachments as $att)
++                                    <a href="{{ route('media.show', ['path' => $att->file_path]) }}" target="_blank" style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.82rem; padding:0.2rem 0.5rem; background:#e3f2fd; border-radius:4px; text-decoration:none;">
++                                        @if($att->attachment_type === 'image')
++                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
++                                        @else
++                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
++                                        @endif
++                                        {{ $att->file_name }}
++                                    </a>
++                                @endforeach
++                                </div>
++                            @else
++                                <span class="muted">-</span>
++                            @endif
++                        </td>
++                        <td style="padding:0.75rem;"><small>{{ $phase->started_at?->format('M d, Y H:i') ?? '-' }}</small></td>
++                        <td style="padding:0.75rem;"><small>{{ $phase->completed_at?->format('M d, Y H:i') ?? '-' }}</small></td>
++                    </tr>
++                @endforeach
++                </tbody>
++            </table>
++        </div>
++    </section>
++    @endif
++
++    @if(($isOperationsManager ?? false) && in_array($ticket->status, ['in_progress', 'assigned', 'logged']))
++    <section class="card">
++        <h3 style="margin-top:0;">Manage Work Phases</h3>
++        <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="card" enctype="multipart/form-data" style="background:#f0f8ff; border:2px solid #2196F3;">
++            @csrf
++            @method('PUT')
++            
++            @php
++                $currentPhase = $ticket->phases->where('status', 'in_progress')->first();
++                if (!$currentPhase) {
++                    $lastPhase = $ticket->phases->sortByDesc('phase_number')->first();
++                    $nextPhaseNumber = ($lastPhase?->phase_number ?? 0) + 1;
++                } else {
++                    $nextPhaseNumber = $currentPhase->phase_number;
++                }
++            @endphp
++            
++            <h4 style="margin-top:0;">Phase {{ $nextPhaseNumber }} - Add Work Details</h4>
++
++            <div style="margin-bottom:1rem;">
++                <label for="technician_notes_ops">Work Notes</label>
++                <textarea
++                    id="technician_notes_ops"
++                    name="technician_notes"
++                    placeholder="Describe what was done in this phase..."
++                    style="min-height:100px;">{{ old('technician_notes', '') }}</textarea>
++            </div>
++
++            <div style="margin-bottom:1rem;">
++                <label for="phase_image_ops">Upload Photo</label>
++                <input
++                    id="phase_image_ops"
++                    type="file"
++                    name="phase_image"
++                    accept="image/*">
++                <small class="muted">Upload progress photos or images of completed work</small>
++            </div>
++
++            <div style="margin-bottom:1rem;">
++                <label for="phase_document_ops">Upload Document</label>
++                <input
++                    id="phase_document_ops"
++                    type="file"
++                    name="phase_document"
++                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
++                <small class="muted">Upload reports, invoices, or other supporting documents</small>
++            </div>
++
++            <div style="display:flex; gap:0.5rem;">
++                <button type="submit" name="action" value="save_phase" class="btn">Save Phase</button>
++                <button type="submit" name="action" value="complete_phase" class="btn btn-success">Complete Phase & Next</button>
++            </div>
++        </form>
++    </section>
++    @endif
++
++    <script>
++        (function () {
++            const refreshIntervalMs = 10000;
++
++            window.setInterval(function () {
++                window.location.reload();
++            }, refreshIntervalMs);
++        })();
++    </script>
+ @endsection
+\ No newline at end of file
+-- 
+2.39.5 (Apple Git-154)
+
+
+From 22a3b9027a8d2d45b1d68067c5233fe1b5a63b15 Mon Sep 17 00:00:00 2001
+From: stephendweteh <dwetehkuru@gmail.com>
+Date: Wed, 1 Jul 2026 17:05:03 +0000
+Subject: [PATCH 2/4] chore: add 'click to view' text above status button
+
+---
+ resources/views/tickets/index.blade.php | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/resources/views/tickets/index.blade.php b/resources/views/tickets/index.blade.php
+index 5f37b3e..222d04c 100644
+--- a/resources/views/tickets/index.blade.php
++++ b/resources/views/tickets/index.blade.php
+@@ -89,9 +89,12 @@
+                     <td>{{ $ticket->property->name }}</td>
+                     <td>{{ $ticket->category->name }}</td>
+                     <td>
+-                        <a href="{{ route('tickets.show', $ticket) }}" style="text-decoration:none;">
+-                            <span class="status-pill status-{{ $ticket->status }}" data-ticket-status="{{ $ticket->id }}">{{ $statusLabels[$ticket->status] ?? str($ticket->status)->replace('_', ' ') }}</span>
+-                        </a>
++                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem;">
++                            <small style="font-size: 0.7rem; color: #666;">click to view</small>
++                            <a href="{{ route('tickets.show', $ticket) }}" style="text-decoration:none;">
++                                <span class="status-pill status-{{ $ticket->status }}" data-ticket-status="{{ $ticket->id }}">{{ $statusLabels[$ticket->status] ?? str($ticket->status)->replace('_', ' ') }}</span>
++                            </a>
++                        </div>
+                     </td>
+                     <td>{{ $ticket->technician?->name ?? 'Unassigned' }}</td>
+                     <td>{{ $ticket->etd?->format('Y-m-d H:i') ?? '-' }}</td>
+-- 
+2.39.5 (Apple Git-154)
+
+
+From cf0b4c9f30189fb495e7f13d8f6fad385c426a7e Mon Sep 17 00:00:00 2001
+From: stephendweteh <dwetehkuru@gmail.com>
+Date: Wed, 1 Jul 2026 17:07:01 +0000
+Subject: [PATCH 3/4] chore: change auto-refresh interval from 10 seconds to 1
+ hour
+
+---
+ resources/views/tickets/show.blade.php | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/resources/views/tickets/show.blade.php b/resources/views/tickets/show.blade.php
+index 5616a59..733c900 100644
+--- a/resources/views/tickets/show.blade.php
++++ b/resources/views/tickets/show.blade.php
+@@ -232,7 +232,7 @@
+ 
+     <script>
+         (function () {
+-            const refreshIntervalMs = 10000;
++            const refreshIntervalMs = 3600000; // 1 hour
+ 
+             window.setInterval(function () {
+                 window.location.reload();
+-- 
+2.39.5 (Apple Git-154)
+
+
+From 128c5952aa023e6e6dbef2790a8581b665c4be38 Mon Sep 17 00:00:00 2001
+From: stephendweteh <dwetehkuru@gmail.com>
+Date: Wed, 1 Jul 2026 17:08:31 +0000
+Subject: [PATCH 4/4] chore: add CSS and view updates from recent development
+
+---
+ public/css/site.css                           | 38 +++++++++++++++++++
+ resources/views/admin/settings/edit.blade.php |  2 +-
+ resources/views/admin/users/index.blade.php   |  2 +-
+ .../users/partials/form-fields.blade.php      |  2 +-
+ resources/views/auth/login.blade.php          |  4 +-
+ resources/views/auth/signup.blade.php         |  4 +-
+ resources/views/layouts/app.blade.php         |  4 +-
+ resources/views/profile/edit.blade.php        |  2 +-
+ .../tickets/partials/form-fields.blade.php    |  2 +-
+ routes/web.php                                | 21 ++++++++++
+ 10 files changed, 70 insertions(+), 11 deletions(-)
+
+diff --git a/public/css/site.css b/public/css/site.css
+index 8c44858..c844b0b 100644
+--- a/public/css/site.css
++++ b/public/css/site.css
+@@ -408,6 +408,31 @@ .table-wrap {
+     overflow: auto;
+ }
+ 
++/* Pagination */
++nav[role="navigation"] {
++    font-size: 0.92rem;
++}
++
++nav[role="navigation"] svg {
++    width: 1em;
++    height: 1em;
++    display: inline-block;
++    vertical-align: middle;
++}
++
++nav[role="navigation"] a,
++nav[role="navigation"] span {
++    font-size: 1em;
++    line-height: 1.2;
++}
++
++nav[role="navigation"] [aria-label="pagination.previous"],
++nav[role="navigation"] [aria-label="pagination.next"] {
++    display: inline-flex;
++    align-items: center;
++    justify-content: center;
++}
++
+ table {
+     width: 100%;
+     border-collapse: collapse;
+@@ -476,6 +501,19 @@ .btn-danger {
+     color: #fff;
+ }
+ 
++.btn-icon {
++    display: inline-flex;
++    align-items: center;
++    gap: 0.3rem;
++    padding: 0.35rem 0.6rem;
++    font-size: 0.82rem;
++    white-space: nowrap;
++}
++
++.btn-icon svg {
++    flex-shrink: 0;
++}
++
+ .filters,
+ .form-grid {
+     display: grid;
+diff --git a/resources/views/admin/settings/edit.blade.php b/resources/views/admin/settings/edit.blade.php
+index 0aeedd7..8339d5e 100644
+--- a/resources/views/admin/settings/edit.blade.php
++++ b/resources/views/admin/settings/edit.blade.php
+@@ -22,7 +22,7 @@
+         @if($logoPath)
+             <div style="margin-bottom: 0.8rem;">
+                 <div class="muted" style="margin-bottom: 0.4rem;">Current Logo</div>
+-                <img src="{{ asset('storage/'.$logoPath) }}" alt="Current logo" style="max-height: 72px; width: auto; display: block; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem;">
++                <img src="{{ route('media.show', ['path' => $logoPath]) }}" alt="Current logo" style="max-height: 72px; width: auto; display: block; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem;">
+             </div>
+ 
+             <div style="margin-bottom: 1rem; display:flex; align-items:center; gap:0.5rem;">
+diff --git a/resources/views/admin/users/index.blade.php b/resources/views/admin/users/index.blade.php
+index 3dfd4cf..7bfccfb 100644
+--- a/resources/views/admin/users/index.blade.php
++++ b/resources/views/admin/users/index.blade.php
+@@ -24,7 +24,7 @@
+                 <tr>
+                     <td>
+                         @if($u->profile_photo_path)
+-                            <img src="{{ asset('storage/'.$u->profile_photo_path) }}" alt="{{ $u->name }} profile photo" class="user-photo-thumb">
++                            <img src="{{ route('media.show', ['path' => $u->profile_photo_path]) }}" alt="{{ $u->name }} profile photo" class="user-photo-thumb">
+                         @else
+                             <span class="muted">-</span>
+                         @endif
+diff --git a/resources/views/admin/users/partials/form-fields.blade.php b/resources/views/admin/users/partials/form-fields.blade.php
+index ef29a01..f2d82b9 100644
+--- a/resources/views/admin/users/partials/form-fields.blade.php
++++ b/resources/views/admin/users/partials/form-fields.blade.php
+@@ -40,7 +40,7 @@
+ @if(isset($user) && $user->profile_photo_path)
+     <div style="margin-bottom: 0.8rem;">
+         <div class="muted" style="margin-bottom: 0.4rem;">Current Profile Picture</div>
+-        <img src="{{ asset('storage/'.$user->profile_photo_path) }}" alt="{{ $user->name }} profile photo" class="user-photo-lg">
++        <img src="{{ route('media.show', ['path' => $user->profile_photo_path]) }}" alt="{{ $user->name }} profile photo" class="user-photo-lg">
+     </div>
+ 
+     <div style="margin-bottom: 1rem; display:flex; align-items:center; gap:0.5rem;">
+diff --git a/resources/views/auth/login.blade.php b/resources/views/auth/login.blade.php
+index 4a82589..20256c5 100644
+--- a/resources/views/auth/login.blade.php
++++ b/resources/views/auth/login.blade.php
+@@ -9,7 +9,7 @@
+     <section class="login-shell">
+         <article class="login-showcase">
+             @if($siteLogoPath)
+-                <img src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo" class="login-showcase-logo">
++                <img src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo" class="login-showcase-logo">
+             @else
+                 <div class="login-showcase-logo-fallback">{{ strtoupper(substr($siteName, 0, 1)) }}</div>
+             @endif
+@@ -21,7 +21,7 @@
+         <article class="login-card-modern">
+             <div class="login-brand-top">
+                 @if($siteLogoPath)
+-                    <img src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo" class="login-top-logo">
++                    <img src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo" class="login-top-logo">
+                 @else
+                     <div class="login-top-logo-fallback">{{ strtoupper(substr($siteName, 0, 1)) }}</div>
+                 @endif
+diff --git a/resources/views/auth/signup.blade.php b/resources/views/auth/signup.blade.php
+index b069b91..a469b38 100644
+--- a/resources/views/auth/signup.blade.php
++++ b/resources/views/auth/signup.blade.php
+@@ -9,7 +9,7 @@
+     <section class="login-shell">
+         <article class="login-showcase">
+             @if($siteLogoPath)
+-                <img src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo" class="login-showcase-logo">
++                <img src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo" class="login-showcase-logo">
+             @else
+                 <div class="login-showcase-logo-fallback">{{ strtoupper(substr($siteName, 0, 1)) }}</div>
+             @endif
+@@ -22,7 +22,7 @@
+         <article class="login-card-modern">
+             <div class="login-brand-top">
+                 @if($siteLogoPath)
+-                    <img src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo" class="login-top-logo">
++                    <img src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo" class="login-top-logo">
+                 @else
+                     <div class="login-top-logo-fallback">{{ strtoupper(substr($siteName, 0, 1)) }}</div>
+                 @endif
+diff --git a/resources/views/layouts/app.blade.php b/resources/views/layouts/app.blade.php
+index 4eb2490..f0716a3 100644
+--- a/resources/views/layouts/app.blade.php
++++ b/resources/views/layouts/app.blade.php
+@@ -29,7 +29,7 @@
+         <aside class="sidebar">
+             <div class="sidebar-brand">
+                 @if($siteLogoPath)
+-                    <img class="sidebar-logo" src="{{ asset('storage/'.$siteLogoPath) }}" alt="{{ $siteName }} logo">
++                    <img class="sidebar-logo" src="{{ route('media.show', ['path' => $siteLogoPath]) }}" alt="{{ $siteName }} logo">
+                 @endif
+                 <h1 class="sidebar-title">{{ $siteName }}</h1>
+                 <p class="sidebar-subtitle">Maintenance System</p>
+@@ -183,7 +183,7 @@
+                 <button type="button" class="top-install-btn" data-install-app hidden>Install App</button>
+                 <a class="top-user-chip" href="{{ route('profile.edit') }}" title="View profile">
+                     @if(auth()->user()->profile_photo_path)
+-                        <img src="{{ asset('storage/'.auth()->user()->profile_photo_path) }}" alt="{{ auth()->user()->name }} profile photo" class="top-user-photo">
++                        <img src="{{ route('media.show', ['path' => auth()->user()->profile_photo_path]) }}" alt="{{ auth()->user()->name }} profile photo" class="top-user-photo">
+                     @else
+                         <span class="top-user-photo top-user-initial">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                     @endif
+diff --git a/resources/views/profile/edit.blade.php b/resources/views/profile/edit.blade.php
+index b18d3b7..f5457c8 100644
+--- a/resources/views/profile/edit.blade.php
++++ b/resources/views/profile/edit.blade.php
+@@ -42,7 +42,7 @@
+         @if($user->profile_photo_path)
+             <div style="margin-bottom: 0.8rem;">
+                 <div class="muted" style="margin-bottom: 0.4rem;">Current Profile Picture</div>
+-                <img src="{{ asset('storage/'.$user->profile_photo_path) }}" alt="{{ $user->name }} profile photo" class="user-photo-lg">
++                <img src="{{ route('media.show', ['path' => $user->profile_photo_path]) }}" alt="{{ $user->name }} profile photo" class="user-photo-lg">
+             </div>
+ 
+             <div style="margin-bottom: 1rem; display:flex; align-items:center; gap:0.5rem;">
+diff --git a/resources/views/tickets/partials/form-fields.blade.php b/resources/views/tickets/partials/form-fields.blade.php
+index 84e4867..c6b77e5 100644
+--- a/resources/views/tickets/partials/form-fields.blade.php
++++ b/resources/views/tickets/partials/form-fields.blade.php
+@@ -151,7 +151,7 @@
+                             <tr>
+                                 <td>{{ str($attachment->attachment_type)->title() }}</td>
+                                 <td>
+-                                    <a href="{{ asset('storage/'.$attachment->file_path) }}" target="_blank" rel="noopener">
++                                    <a href="{{ route('media.show', ['path' => $attachment->file_path]) }}" target="_blank" rel="noopener">
+                                         {{ $attachment->file_name }}
+                                     </a>
+                                 </td>
+diff --git a/routes/web.php b/routes/web.php
+index 464c306..505d40e 100644
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -9,10 +9,31 @@
+ use App\Http\Controllers\Web\PwaController;
+ use App\Http\Controllers\Web\ProfileController;
+ use App\Http\Controllers\Web\TicketController;
++use Illuminate\Support\Facades\Storage;
+ use Illuminate\Support\Facades\Route;
+ 
+ Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
+ 
++Route::get('/media/{path}', function (string $path) {
++	abort_if(str_contains($path, '..'), 404);
++
++	$disk = Storage::disk('public');
++	abort_unless($disk->exists($path), 404);
++
++	$stream = $disk->readStream($path);
++	abort_unless(is_resource($stream), 404);
++
++	$mimeType = $disk->mimeType($path) ?: 'application/octet-stream';
++
++	return response()->stream(function () use ($stream): void {
++		fpassthru($stream);
++		fclose($stream);
++	}, 200, [
++		'Content-Type' => $mimeType,
++		'Cache-Control' => 'public, max-age=604800',
++	]);
++})->where('path', '.*')->name('media.show');
++
+ Route::middleware('guest')->group(function (): void {
+ 	Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+ 	Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+-- 
+2.39.5 (Apple Git-154)
+
