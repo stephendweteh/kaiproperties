@@ -2,20 +2,35 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Get project root - try multiple methods
+if [ -z "${1:-}" ]; then
+  # Try to auto-detect by going up 2 directories
+  REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+else
+  # Use provided path
+  REPO_ROOT="$1"
+fi
+
 PATCH_FILE="$SCRIPT_DIR/phase-system-updates.patch"
+
+# Validate project root
+if [ ! -f "$REPO_ROOT/artisan" ]; then
+  echo "ERROR: Could not find Laravel project at: $REPO_ROOT"
+  echo ""
+  echo "Usage: $0 /path/to/kai-maintenance-system"
+  echo ""
+  echo "Or extract zip in your project and run:"
+  echo "  cd /path/to/kai-maintenance-system"
+  echo "  bash deployment/20260701-phase-system-updates-patch/apply.sh"
+  exit 1
+fi
 
 cd "$REPO_ROOT"
 
 if [ ! -f "$PATCH_FILE" ]; then
   echo "ERROR: Patch file not found: $PATCH_FILE" >&2
   exit 1
-fi
-
-# Check if patch has already been applied
-if git rev-parse --verify 128c595 >/dev/null 2>&1; then
-  echo "Patch already applied. Current commit: $(git rev-parse --short HEAD)"
-  exit 0
 fi
 
 echo "Applying phase system updates patch..."
