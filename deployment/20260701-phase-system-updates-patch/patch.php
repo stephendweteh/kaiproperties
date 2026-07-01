@@ -1,12 +1,9 @@
 <?php
 /**
- * Phase System Updates - No-Git Patcher
+ * Phase System Updates - No-Git Patcher (Improved)
  * Works without git, patch command, or any external tools
- * Just upload and run: php patch.php
+ * Automatically finds Laravel project root
  */
-
-$projectRoot = dirname(__FILE__, 4);
-$basePath = __DIR__;
 
 // Color codes for terminal output
 define('GREEN', "\033[32m");
@@ -18,19 +15,77 @@ echo GREEN . "========================================" . RESET . "\n";
 echo GREEN . "Phase System Updates - Direct Patcher" . RESET . "\n";
 echo GREEN . "========================================" . RESET . "\n\n";
 
-// Verify project structure
-if (!file_exists($projectRoot . '/artisan')) {
-    echo RED . "ERROR: Could not find Laravel project\n";
-    echo "Please ensure this script is in: deployment/20260701-phase-system-updates-patch/\n" . RESET;
+// Get project root - try multiple methods
+$projectRoot = null;
+$scriptPath = __DIR__;
+
+// Method 1: Check if artisan is in current directory
+if (file_exists('artisan')) {
+    $projectRoot = getcwd();
+}
+
+// Method 2: Check arguments
+if ($projectRoot === null && isset($argv[1])) {
+    if (file_exists($argv[1] . '/artisan')) {
+        $projectRoot = $argv[1];
+    }
+}
+
+// Method 3: Try going up directories from script location
+if ($projectRoot === null) {
+    $checkPath = $scriptPath;
+    for ($i = 0; $i < 5; $i++) {
+        if (file_exists($checkPath . '/artisan')) {
+            $projectRoot = $checkPath;
+            break;
+        }
+        $checkPath = dirname($checkPath);
+    }
+}
+
+// Method 4: Check parent directory of deployment folder
+if ($projectRoot === null && file_exists(dirname($scriptPath) . '/../../artisan')) {
+    $projectRoot = dirname($scriptPath) . '/../..';
+    $projectRoot = realpath($projectRoot);
+}
+
+// Verify project root
+if ($projectRoot === null || !file_exists($projectRoot . '/artisan')) {
+    echo RED . "ERROR: Could not find Laravel project!" . RESET . "\n";
+    echo RED . "The artisan file was not found." . RESET . "\n\n";
+    
+    echo YELLOW . "How to fix this:" . RESET . "\n\n";
+    
+    echo "1. If you extracted the zip, ensure the structure is correct:\n";
+    echo "   - Your Laravel project root should have: artisan, composer.json, app/, etc.\n\n";
+    
+    echo "2. Try one of these:\n\n";
+    
+    echo "   Option A - Run from project root:\n";
+    echo "   " . GREEN . "cd /path/to/kai-maintenance-system" . RESET . "\n";
+    echo "   " . GREEN . "php patch.php" . RESET . "\n\n";
+    
+    echo "   Option B - Provide path as argument:\n";
+    echo "   " . GREEN . "php patch.php /path/to/kai-maintenance-system" . RESET . "\n\n";
+    
+    echo "   Option C - Use apply-local.sh script instead:\n";
+    echo "   " . GREEN . "cd /path/to/kai-maintenance-system" . RESET . "\n";
+    echo "   " . GREEN . "bash deployment/20260701-phase-system-updates-patch/apply-local.sh" . RESET . "\n\n";
+    
+    echo "3. Find your project with:\n";
+    echo "   " . GREEN . "find ~ -name artisan -type f 2>/dev/null" . RESET . "\n\n";
+    
     exit(1);
 }
+
+$projectRoot = realpath($projectRoot);
 
 echo "Project found at: " . GREEN . $projectRoot . RESET . "\n\n";
 
 // Create backup
 $backupDir = $projectRoot . '/storage/backups/patch-' . date('Y-m-d-H-i-s');
 if (!is_dir($backupDir)) {
-    mkdir($backupDir, 0755, true);
+    @mkdir($backupDir, 0755, true);
 }
 
 $files = [
@@ -40,12 +95,15 @@ $files = [
 ];
 
 echo "Creating backup...\n";
+$backupCount = 0;
 foreach ($files as $file) {
     $source = $projectRoot . '/' . $file;
-    $dest = $backupDir . '/' . basename($file);
     if (file_exists($source)) {
-        copy($source, $dest);
-        echo "  ✓ Backed up: $file\n";
+        $dest = $backupDir . '/' . basename($file);
+        if (@copy($source, $dest)) {
+            echo "  ✓ Backed up: $file\n";
+            $backupCount++;
+        }
     }
 }
 echo "\nBackup location: " . GREEN . $backupDir . RESET . "\n\n";
