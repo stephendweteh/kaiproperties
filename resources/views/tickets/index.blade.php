@@ -89,9 +89,12 @@
                     <td>{{ $ticket->property->name }}</td>
                     <td>{{ $ticket->category->name }}</td>
                     <td>
-                        <a href="{{ route('tickets.show', $ticket) }}" style="text-decoration:none;">
-                            <span class="status-pill status-{{ $ticket->status }}" data-ticket-status="{{ $ticket->id }}">{{ $statusLabels[$ticket->status] ?? str($ticket->status)->replace('_', ' ') }}</span>
-                        </a>
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem;">
+                            <small style="font-size: 0.7rem; color: #666;">click to view</small>
+                            <a href="{{ route('tickets.show', $ticket) }}" style="text-decoration:none;">
+                                <span class="status-pill status-{{ $ticket->status }}" data-ticket-status="{{ $ticket->id }}">{{ $statusLabels[$ticket->status] ?? str($ticket->status)->replace('_', ' ') }}</span>
+                            </a>
+                        </div>
                     </td>
                     <td>{{ $ticket->technician?->name ?? 'Unassigned' }}</td>
                     <td>{{ $ticket->etd?->format('Y-m-d H:i') ?? '-' }}</td>
