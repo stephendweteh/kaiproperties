@@ -1,0 +1,1 @@
+cd /home/tackjdgn/kai.tacklehubs.tech && bash deployment/20260701-comprehensive-ticket-patch/apply-comprehensive.sh
