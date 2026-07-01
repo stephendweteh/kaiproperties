@@ -70,6 +70,7 @@ class TicketController extends Controller
             'canEditTickets' => $canEditTickets,
             'canCreateTickets' => $canCreateTickets,
             'reviewMode' => $reviewMode,
+            'isOperationsManager' => $user?->hasRole(User::ROLE_OPERATIONS_MANAGER) ?? false,
             'technicians' => ($isReporterScopedRole || $isTechnician)
                 ? collect()
                 : User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get(),
@@ -109,6 +110,7 @@ class TicketController extends Controller
             'reporter:id,name',
             'technician:id,name',
             'attachments.uploader:id,name',
+            'phases.attachments.uploader:id,name',
         ]);
 
         return view('tickets.show', [
@@ -116,6 +118,7 @@ class TicketController extends Controller
             'canEditTickets' => $this->canEditTickets($user),
             'canApproveTickets' => $canApproveTickets,
             'canTechnicianUpdate' => $this->canTechnicianUpdateStatus($user, $ticket),
+            'isOperationsManager' => $user->hasRole(User::ROLE_OPERATIONS_MANAGER),
             'technicians' => $canApproveTickets
                 ? User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get()
                 : collect(),
@@ -203,9 +206,11 @@ class TicketController extends Controller
         $previousStatus = $ticket->status;
         $previousAssignedTo = (int) ($ticket->assigned_to ?? 0);
 
-        abort_unless($canEditTickets || $canApproveTickets || $canTechnicianUpdate, 403);
+        abort_unless($canEditTickets || $canApproveTickets || $canTechnicianUpdate || $user->hasRole(User::ROLE_OPERATIONS_MANAGER), 403);
 
-        if ($canTechnicianUpdate && ! $canEditTickets && ! $canApproveTickets) {
+        $isOperationsManager = $user->hasRole(User::ROLE_OPERATIONS_MANAGER);
+
+        if (($canTechnicianUpdate || $isOperationsManager) && ! $canEditTickets && ! $canApproveTickets) {
             $action = $request->input('action', 'update_status');
 
             // Operations Manager marks ticket as completed
@@ -294,38 +299,48 @@ class TicketController extends Controller
 
                 $ticket->save();
 
-                return redirect()
-                    ->route('tickets.edit', $ticket)
+                $redirectRoute = $isOperationsManager ? route('tickets.show', $ticket) : route('tickets.edit', $ticket);
+                
+                return redirect($redirectRoute)
                     ->with('success', 'Phase saved successfully.');
             }
 
-            // Standard status update (non-phase)
-            $validated = $request->validate([
-                'status' => ['required', 'in:in_progress,completed'],
-            ]);
+            // Standard status update (non-phase) - only for technicians
+            if (!$isOperationsManager) {
+                $validated = $request->validate([
+                    'status' => ['required', 'in:in_progress,completed'],
+                ]);
 
-            if ($validated['status'] === 'in_progress' && ! $ticket->started_at) {
-                $ticket->started_at = now();
-            }
-
-            if ($validated['status'] === 'completed') {
-                if (! $ticket->started_at) {
+                if ($validated['status'] === 'in_progress' && ! $ticket->started_at) {
                     $ticket->started_at = now();
                 }
 
-                $ticket->completed_at = now();
+                if ($validated['status'] === 'completed') {
+                    if (! $ticket->started_at) {
+                        $ticket->started_at = now();
+                    }
+
+                    $ticket->completed_at = now();
+                }
+
+                $ticket->status = $validated['status'];
+                $ticket->save();
+
+                if ($previousStatus !== $ticket->status) {
+                    $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
+                }
+
+                return redirect()
+                    ->route('tickets.index')
+                    ->with('success', 'Ticket status updated successfully.');
             }
-
-            $ticket->status = $validated['status'];
-            $ticket->save();
-
-            if ($previousStatus !== $ticket->status) {
-                $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
-            }
-
+        }
+        
+        if ($isOperationsManager) {
+            // Operations manager attempted to update without phase action
             return redirect()
-                ->route('tickets.index')
-                ->with('success', 'Ticket status updated successfully.');
+                ->route('tickets.show', $ticket)
+                ->with('error', 'Invalid action.');
         }
 
         if ($canApproveTickets && ! $canEditTickets) {
