@@ -1,16 +1,16 @@
 #!/bin/bash
-# Comprehensive Ticket System Patch - All Updates in One
-# Usage: bash apply-comprehensive.sh [optional-project-path]
+# Ticket System Update - Simple & Reliable
+# Usage: bash apply.sh [optional-project-path]
 
 set -e
 
 PROJECT_ROOT="${1:-.}"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-BACKUP_DIR="$PROJECT_ROOT/storage/backups/comprehensive-ticket-$TIMESTAMP"
+BACKUP_DIR="$PROJECT_ROOT/storage/backups/ticket-updates-$TIMESTAMP"
 
 echo ""
 echo "=========================================="
-echo "  Comprehensive Ticket System Patcher"
+echo "  Ticket System Update Patcher"
 echo "=========================================="
 echo ""
 
@@ -20,10 +20,10 @@ if [ ! -f "$PROJECT_ROOT/artisan" ]; then
     echo ""
     echo "Usage:"
     echo "  From project root:"
-    echo "    bash deployment/20260701-comprehensive-ticket-patch/apply-comprehensive.sh"
+    echo "    bash deployment/20260701-comprehensive-ticket-patch/apply.sh"
     echo ""
     echo "  Or with path:"
-    echo "    bash apply-comprehensive.sh /path/to/your/project"
+    echo "    bash apply.sh /path/to/your/project"
     echo ""
     exit 1
 fi
@@ -36,7 +36,6 @@ mkdir -p "$BACKUP_DIR"
 cp -r "$PROJECT_ROOT/app" "$BACKUP_DIR/" 2>/dev/null || true
 cp -r "$PROJECT_ROOT/resources" "$BACKUP_DIR/" 2>/dev/null || true
 cp -r "$PROJECT_ROOT/database" "$BACKUP_DIR/" 2>/dev/null || true
-cp -r "$PROJECT_ROOT/public" "$BACKUP_DIR/" 2>/dev/null || true
 cp "$PROJECT_ROOT/composer.json" "$BACKUP_DIR/" 2>/dev/null || true
 echo "✓ Backup created"
 echo ""
@@ -50,27 +49,32 @@ if [ ! -f "$PATCH_FILE" ]; then
     exit 1
 fi
 
-echo "  Validating patch compatibility..."
+echo "  Validating patch..."
 cd "$PROJECT_ROOT"
 
 if ! patch -p1 --dry-run < "$PATCH_FILE" > /dev/null 2>&1; then
-    echo "❌ ERROR: Patch validation failed"
-    echo ""
-    echo "Restoring from backup..."
-    rm -rf "$PROJECT_ROOT/app" "$PROJECT_ROOT/resources" "$PROJECT_ROOT/database" "$PROJECT_ROOT/public" 2>/dev/null || true
-    cp -r "$BACKUP_DIR/app" "$PROJECT_ROOT/" 2>/dev/null || true
-    cp -r "$BACKUP_DIR/resources" "$PROJECT_ROOT/" 2>/dev/null || true
-    cp -r "$BACKUP_DIR/database" "$PROJECT_ROOT/" 2>/dev/null || true
-    cp -r "$BACKUP_DIR/public" "$PROJECT_ROOT/" 2>/dev/null || true
-    echo "✓ Restored from backup"
-    echo ""
-    echo "Backup location: $BACKUP_DIR"
-    exit 1
+    echo "  ⚠ Strict validation failed, trying with fuzz..."
+    if ! patch -p1 --fuzz=2 --dry-run < "$PATCH_FILE" > /dev/null 2>&1; then
+        echo "❌ ERROR: Patch validation failed"
+        echo ""
+        echo "Restoring from backup..."
+        rm -rf "$PROJECT_ROOT/app" "$PROJECT_ROOT/resources" "$PROJECT_ROOT/database" 2>/dev/null || true
+        cp -r "$BACKUP_DIR/app" "$PROJECT_ROOT/" 2>/dev/null || true
+        cp -r "$BACKUP_DIR/resources" "$PROJECT_ROOT/" 2>/dev/null || true
+        cp -r "$BACKUP_DIR/database" "$PROJECT_ROOT/" 2>/dev/null || true
+        echo "✓ Restored from backup"
+        echo ""
+        echo "Backup location: $BACKUP_DIR"
+        exit 1
+    fi
+    FUZZ_FLAG="--fuzz=2"
+else
+    FUZZ_FLAG=""
 fi
 
-echo "  Applying comprehensive ticket patch..."
-patch -p1 < "$PATCH_FILE" > /dev/null 2>&1
-echo "✓ Patch applied successfully"
+echo "  Applying patch..."
+patch -p1 $FUZZ_FLAG < "$PATCH_FILE" > /dev/null 2>&1
+echo "✓ Patch applied"
 echo ""
 
 # Run migrations
@@ -87,16 +91,14 @@ echo "✓ Cache cleared"
 echo ""
 
 echo "=========================================="
-echo "  ✓ COMPREHENSIVE PATCH APPLIED!"
+echo "  ✓ TICKET SYSTEM UPDATED!"
 echo "=========================================="
 echo ""
-echo "All ticket system enhancements installed:"
+echo "Features installed:"
 echo "  ✓ Phase-based work progress system"
 echo "  ✓ Operations Manager controls"
 echo "  ✓ Clickable status buttons"
-echo "  ✓ Updated action buttons"
-echo "  ✓ File management system"
-echo "  ✓ Auto-refresh optimization"
+echo "  ✓ Action button updates"
 echo ""
 echo "Next: Hard refresh browser (Ctrl+Shift+R)"
 echo ""
