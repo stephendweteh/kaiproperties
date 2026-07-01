@@ -1,0 +1,1 @@
+cd /home/tackjdgn/kai.tacklehubs.tech && php deployment/20260701-full-deployment-build/deploy.php && echo "" && echo "✓ Deployment complete! Hard refresh browser: Ctrl+Shift+R"
