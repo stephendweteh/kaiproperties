@@ -232,7 +232,7 @@
 
     <script>
         (function () {
-            const refreshIntervalMs = 10000;
+            const refreshIntervalMs = 3600000; // 1 hour
 
             window.setInterval(function () {
                 window.location.reload();
