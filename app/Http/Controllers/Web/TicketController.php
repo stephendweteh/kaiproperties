@@ -235,7 +235,8 @@ class TicketController extends Controller
                 $existingNotes = trim((string) ($phase->manager_notes ?? ''));
                 $newNotes = trim($validated['manager_notes']);
                 $timestamp = now()->format('Y-m-d H:i');
-                $entry = "[Operations Manager {$timestamp}] {$newNotes}";
+                $managerName = $user->name;
+                $entry = "[{$managerName} {$timestamp}] {$newNotes}";
 
                 $phase->update([
                     'manager_notes' => $existingNotes !== ''
