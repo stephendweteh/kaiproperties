@@ -123,7 +123,7 @@
         @endif
     </section>
 
-    @if((($isOperationsManager ?? false) || ($isTechnician ?? false)) && $ticket->phases->isNotEmpty())
+    @if(($canViewWorkProgress ?? false) && $ticket->phases->isNotEmpty())
     <section class="card">
         <h3 style="margin-top:0;">Technician Work Progress — {{ $ticket->technician?->name ?? 'Unassigned' }}</h3>
         <div class="table-wrap" style="margin-bottom:1rem;">

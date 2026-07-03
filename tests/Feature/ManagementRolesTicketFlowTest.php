@@ -55,7 +55,7 @@ class ManagementRolesTicketFlowTest extends TestCase
         $this->assertSame('pending_approval', $ticket->status);
     }
 
-    public function test_general_manager_can_only_see_own_reported_tickets_in_api_index(): void
+    public function test_general_manager_can_see_all_tickets_in_api_index(): void
     {
         $generalManager = User::create([
             'name' => 'General Manager',
@@ -98,9 +98,9 @@ class ManagementRolesTicketFlowTest extends TestCase
             'priority' => 'medium',
         ]);
 
-        Ticket::create([
+        $otherTicket = Ticket::create([
             'title' => 'Other ticket',
-            'description' => 'GM should not see this',
+            'description' => 'GM should also see this',
             'property_id' => $property->id,
             'maintenance_category_id' => $category->id,
             'reported_by' => $otherReporter->id,
@@ -113,8 +113,9 @@ class ManagementRolesTicketFlowTest extends TestCase
         $response = $this->getJson('/api/v1/tickets');
 
         $response->assertOk();
-        $response->assertJsonCount(1, 'data');
-        $response->assertJsonPath('data.0.id', $ownTicket->id);
+        $response->assertJsonCount(2, 'data');
+        $response->assertJsonFragment(['id' => $ownTicket->id]);
+        $response->assertJsonFragment(['id' => $otherTicket->id]);
     }
 
     public function test_operations_manager_can_approve_and_assign_pending_ticket_via_api(): void
@@ -373,5 +374,75 @@ class ManagementRolesTicketFlowTest extends TestCase
         $this->patchJson('/api/v1/tickets/'.$ticket->id.'/status', [
             'status' => 'on_hold',
         ])->assertStatus(422);
+    }
+
+    public function test_general_manager_can_view_technician_work_progress_on_ticket_show_page(): void
+    {
+        $generalManager = User::create([
+            'name' => 'General Manager',
+            'email' => 'gm.progress@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_GENERAL_MANAGER,
+            'is_approved' => true,
+        ]);
+
+        $reporter = User::create([
+            'name' => 'Reporter User',
+            'email' => 'reporter.progress@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_MANAGING_DIRECTOR,
+            'is_approved' => true,
+        ]);
+
+        $technician = User::create([
+            'name' => 'Tech Progress',
+            'email' => 'tech.progress@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_TECHNICIAN,
+            'is_approved' => true,
+        ]);
+
+        $property = Property::create([
+            'name' => 'Kai Progress',
+            'code' => 'KAI-PRG',
+            'city' => 'Accra',
+            'state' => 'Greater Accra',
+            'address' => 'Progress Street',
+            'is_active' => true,
+        ]);
+
+        $category = MaintenanceCategory::create([
+            'name' => 'General',
+            'description' => 'General issues',
+            'is_active' => true,
+        ]);
+
+        $ticket = Ticket::create([
+            'title' => 'Progress visibility ticket',
+            'description' => 'Ensure management can view work progress on show page',
+            'property_id' => $property->id,
+            'maintenance_category_id' => $category->id,
+            'reported_by' => $reporter->id,
+            'assigned_to' => $technician->id,
+            'status' => 'in_progress',
+            'priority' => 'medium',
+            'started_at' => now(),
+        ]);
+
+        $ticket->phases()->create([
+            'phase_name' => 'Phase 1',
+            'phase_number' => 1,
+            'status' => 'completed',
+            'technician_notes' => 'Initial diagnostics done.',
+            'manager_notes' => '[Operations Manager 2026-07-03 10:00] Continue to next step.',
+            'started_at' => now()->subHour(),
+            'completed_at' => now(),
+        ]);
+
+        $this->actingAs($generalManager)
+            ->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSeeText('Technician Work Progress')
+            ->assertSeeText('Initial diagnostics done.');
     }
 }

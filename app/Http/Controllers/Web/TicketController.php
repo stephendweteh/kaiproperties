@@ -39,7 +39,10 @@ class TicketController extends Controller
                 'technician:id,name',
                 'attachments:id,ticket_id,file_path,file_name,attachment_type',
             ])
-            ->when($isReporterScopedRole, fn (Builder $builder) => $builder->where('reported_by', $request->user()->id))
+            ->when(
+                $isReporterScopedRole && ! $this->hasFullTicketVisibility($user),
+                fn (Builder $builder) => $builder->where('reported_by', $request->user()->id)
+            )
             ->when($isTechnician, fn (Builder $builder) => $builder
                 ->where('assigned_to', $request->user()->id)
                 ->whereIn('status', $this->technicianVisibleStatuses()))
@@ -121,6 +124,13 @@ class TicketController extends Controller
             'canTechnicianUpdate' => $this->canTechnicianUpdateStatus($user, $ticket),
             'isTechnician' => $user->hasRole(User::ROLE_TECHNICIAN),
             'isOperationsManager' => $user->hasRole(User::ROLE_OPERATIONS_MANAGER),
+            'canViewWorkProgress' => $user->hasRole([
+                User::ROLE_ADMIN,
+                User::ROLE_OPERATIONS_MANAGER,
+                User::ROLE_MANAGING_DIRECTOR,
+                User::ROLE_GENERAL_MANAGER,
+                User::ROLE_TECHNICIAN,
+            ]),
             'technicians' => $canApproveTickets
                 ? User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get()
                 : collect(),
@@ -718,7 +728,7 @@ class TicketController extends Controller
 
     private function canViewTicket(?User $user, Ticket $ticket): bool
     {
-        if ($this->canEditTickets($user) || $this->canApproveTickets($user)) {
+        if ($this->hasFullTicketVisibility($user) || $this->canEditTickets($user) || $this->canApproveTickets($user)) {
             return true;
         }
 
@@ -750,5 +760,15 @@ class TicketController extends Controller
     private function technicianVisibleStatuses(): array
     {
         return ['logged', 'assigned', 'in_progress', 'on_hold', 'completed', 'closed', 'overdue'];
+    }
+
+    private function hasFullTicketVisibility(?User $user): bool
+    {
+        return (bool) $user?->hasRole([
+            User::ROLE_ADMIN,
+            User::ROLE_OPERATIONS_MANAGER,
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
     }
 }

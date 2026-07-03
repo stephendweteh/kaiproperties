@@ -46,7 +46,7 @@ class TicketController extends Controller
             })
             ->latest();
 
-        if ($isReporterScopedRole) {
+        if ($isReporterScopedRole && ! $this->hasFullTicketVisibility($user)) {
             $query->where('reported_by', $user->id);
         }
 
@@ -275,7 +275,7 @@ class TicketController extends Controller
 
     private function authorizeTicketAccess(User $user, Ticket $ticket): void
     {
-        if ($user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER])) {
+        if ($this->hasFullTicketVisibility($user) || $user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER])) {
             return;
         }
 
@@ -320,6 +320,16 @@ class TicketController extends Controller
     {
         return $user->hasRole([
             User::ROLE_TENANT,
+            User::ROLE_ADMIN,
+            User::ROLE_OPERATIONS_MANAGER,
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
+    }
+
+    private function hasFullTicketVisibility(User $user): bool
+    {
+        return $user->hasRole([
             User::ROLE_ADMIN,
             User::ROLE_OPERATIONS_MANAGER,
             User::ROLE_MANAGING_DIRECTOR,
