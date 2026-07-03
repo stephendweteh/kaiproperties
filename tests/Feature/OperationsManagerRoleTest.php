@@ -59,7 +59,7 @@ class OperationsManagerRoleTest extends TestCase
 
         $ticket = Ticket::query()->firstOrFail();
 
-        $this->assertSame('pending_approval', $ticket->status);
+        $this->assertSame('logged', $ticket->status);
 
         $this->actingAs($operationsManager)
             ->put(route('tickets.update', $ticket), [
@@ -186,5 +186,68 @@ class OperationsManagerRoleTest extends TestCase
             ->assertRedirect(route('tickets.index'));
 
         $this->assertDatabaseMissing('tickets', ['id' => $ticket->id]);
+    }
+
+    public function test_operations_manager_can_change_main_ticket_status_via_web_update_route(): void
+    {
+        $operationsManager = User::create([
+            'name' => 'Operations Manager',
+            'email' => 'ops.status@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_OPERATIONS_MANAGER,
+        ]);
+
+        $technician = User::create([
+            'name' => 'Tech Status',
+            'email' => 'tech.status@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_TECHNICIAN,
+        ]);
+
+        $property = Property::create([
+            'name' => 'Kai Status',
+            'code' => 'KAI-STS',
+            'city' => 'Accra',
+            'state' => 'Greater Accra',
+            'address' => 'Status Street',
+            'is_active' => true,
+        ]);
+
+        $category = MaintenanceCategory::create([
+            'name' => 'Plumbing',
+            'description' => 'Plumbing issues',
+            'is_active' => true,
+        ]);
+
+        $ticket = Ticket::create([
+            'title' => 'Status change request',
+            'description' => 'Change status via update route',
+            'property_id' => $property->id,
+            'maintenance_category_id' => $category->id,
+            'reported_by' => $operationsManager->id,
+            'assigned_to' => $technician->id,
+            'status' => 'logged',
+            'priority' => 'medium',
+        ]);
+
+        $this->actingAs($operationsManager)
+            ->put(route('tickets.update', $ticket), [
+                'title' => $ticket->title,
+                'description' => $ticket->description,
+                'property_id' => $property->id,
+                'maintenance_category_id' => $category->id,
+                'unit' => null,
+                'assigned_to' => $technician->id,
+                'status' => 'in_progress',
+                'priority' => 'medium',
+                'etd' => null,
+                'estimated_cost' => null,
+            ])
+            ->assertRedirect(route('tickets.index'));
+
+        $ticket->refresh();
+
+        $this->assertSame('in_progress', $ticket->status);
+        $this->assertNotNull($ticket->started_at);
     }
 }

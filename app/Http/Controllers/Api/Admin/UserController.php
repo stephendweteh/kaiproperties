@@ -31,7 +31,9 @@ class UserController extends Controller
     {
         $user = User::create($request->validated());
 
-        $this->notificationService->sendUserCreated($user);
+        app()->terminating(function () use ($user): void {
+            $this->notificationService->sendUserCreated($user);
+        });
 
         return response()->json([
             'message' => 'User created successfully.',
@@ -81,7 +83,9 @@ class UserController extends Controller
             ], 422);
         }
 
-        $this->notificationService->sendUserDeleted($user);
+        app()->terminating(function () use ($user): void {
+            $this->notificationService->sendUserDeleted($user);
+        });
 
         return response()->json([
             'message' => 'User deleted successfully.',

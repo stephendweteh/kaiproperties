@@ -7,6 +7,13 @@ use Illuminate\Support\Facades\Schema;
 
 class Setting extends Model
 {
+    private static ?bool $settingsTableExists = null;
+
+    /**
+     * @var array<string, string|null>
+     */
+    private static array $valueCache = [];
+
     protected $fillable = [
         'key',
         'value',
@@ -14,16 +21,23 @@ class Setting extends Model
 
     public static function valueFor(string $key, ?string $default = null): ?string
     {
-        if (! Schema::hasTable('settings')) {
+        if (array_key_exists($key, self::$valueCache)) {
+            return self::$valueCache[$key] ?? $default;
+        }
+
+        if (! self::hasSettingsTable()) {
             return $default;
         }
 
-        return static::query()->where('key', $key)->value('value') ?? $default;
+        $value = static::query()->where('key', $key)->value('value') ?? $default;
+        self::$valueCache[$key] = $value;
+
+        return $value;
     }
 
     public static function setValue(string $key, ?string $value): void
     {
-        if (! Schema::hasTable('settings')) {
+        if (! self::hasSettingsTable()) {
             return;
         }
 
@@ -31,5 +45,18 @@ class Setting extends Model
             ['key' => $key],
             ['value' => $value]
         );
+
+        self::$valueCache[$key] = $value;
+    }
+
+    private static function hasSettingsTable(): bool
+    {
+        if (self::$settingsTableExists === true) {
+            return true;
+        }
+
+        self::$settingsTableExists = Schema::hasTable('settings');
+
+        return self::$settingsTableExists;
     }
 }

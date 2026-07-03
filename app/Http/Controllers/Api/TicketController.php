@@ -76,7 +76,10 @@ class TicketController extends Controller
             'priority' => $validated['priority'] ?? 'medium',
         ]);
 
-        $this->notificationService->sendTicketLogged($ticket->fresh(['reporter', 'technician']));
+        $ticketForNotification = $ticket->fresh(['reporter', 'technician']);
+        app()->terminating(function () use ($ticketForNotification): void {
+            $this->notificationService->sendTicketLogged($ticketForNotification);
+        });
 
         return response()->json([
             'message' => $status === 'pending_approval'
@@ -128,7 +131,10 @@ class TicketController extends Controller
 
         $ticket->update($attributes);
 
-        $this->notificationService->sendTicketAssigned($ticket->fresh());
+        $ticketForNotification = $ticket->fresh();
+        app()->terminating(function () use ($ticketForNotification): void {
+            $this->notificationService->sendTicketAssigned($ticketForNotification);
+        });
 
         return response()->json([
             'message' => 'Ticket assigned successfully.',
@@ -181,7 +187,10 @@ class TicketController extends Controller
         $ticket->update($attributes);
 
         if ($previousStatus !== $ticket->status) {
-            $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
+            $ticketForNotification = $ticket->fresh();
+            app()->terminating(function () use ($ticketForNotification, $previousStatus): void {
+                $this->notificationService->sendTicketStatusChanged($ticketForNotification, $previousStatus);
+            });
         }
 
         return response()->json([
@@ -215,7 +224,10 @@ class TicketController extends Controller
         ]);
 
         if ($previousStatus !== $ticket->status) {
-            $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
+            $ticketForNotification = $ticket->fresh();
+            app()->terminating(function () use ($ticketForNotification, $previousStatus): void {
+                $this->notificationService->sendTicketStatusChanged($ticketForNotification, $previousStatus);
+            });
         }
 
         return response()->json([
@@ -247,7 +259,10 @@ class TicketController extends Controller
         $costRequest->ticket()->update(['status' => $nextTicketStatus]);
 
         if ($previousStatus !== $nextTicketStatus) {
-            $this->notificationService->sendTicketStatusChanged($costRequest->ticket->fresh(), $previousStatus);
+            $ticketForNotification = $costRequest->ticket->fresh();
+            app()->terminating(function () use ($ticketForNotification, $previousStatus): void {
+                $this->notificationService->sendTicketStatusChanged($ticketForNotification, $previousStatus);
+            });
         }
 
         $this->notificationService->sendCostRequestReviewed($costRequest->fresh());

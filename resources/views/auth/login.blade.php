@@ -32,7 +32,7 @@
                 <h3>Sign In</h3>
                 <p class="muted">Use your account credentials to access the platform.</p>
 
-                <form method="POST" action="{{ route('login.attempt') }}" class="login-form">
+                <form method="POST" action="{{ route('login.attempt') }}" class="login-form" data-loader-action="login">
                     @csrf
 
                     <div class="field-group">
@@ -48,7 +48,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-login">Login</button>
+                    <button type="submit" class="btn-login" data-loader-action="login">Login</button>
                 </form>
 
                 <div class="card" style="margin-top: 1rem; background:#f8fafc; border:1px solid #e2e8f0; box-shadow:none;">

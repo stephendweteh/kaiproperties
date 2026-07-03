@@ -94,7 +94,9 @@ class UserController extends Controller
             $user->update(['profile_photo_path' => $path]);
         }
 
-        $this->notificationService->sendUserCreated($user);
+        app()->terminating(function () use ($user): void {
+            $this->notificationService->sendUserCreated($user);
+        });
 
         return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
     }
@@ -181,7 +183,9 @@ class UserController extends Controller
             Storage::disk('public')->delete($photoPath);
         }
 
-        $this->notificationService->sendUserDeleted($user);
+        app()->terminating(function () use ($user): void {
+            $this->notificationService->sendUserDeleted($user);
+        });
 
         return redirect()->route('admin.users.index')->with('success', 'User deleted successfully.');
     }
@@ -198,7 +202,9 @@ class UserController extends Controller
             'approved_by' => $request->user()?->id,
         ]);
 
-        $this->notificationService->sendUserApproved($user);
+        app()->terminating(function () use ($user): void {
+            $this->notificationService->sendUserApproved($user);
+        });
 
         return redirect()->route('admin.users.index')->with('success', 'User approved successfully.');
     }

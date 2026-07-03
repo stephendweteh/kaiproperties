@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class TicketController extends Controller
 {
@@ -163,7 +164,11 @@ class TicketController extends Controller
         ]);
 
         $this->storeAttachments($request, $ticket);
-        $this->notificationService->sendTicketLogged($ticket->fresh(['reporter', 'technician']));
+
+        $ticketForNotification = $ticket->fresh(['reporter', 'technician']);
+        app()->terminating(function () use ($ticketForNotification): void {
+            $this->notificationService->sendTicketLogged($ticketForNotification);
+        });
 
         $redirect = $isTenant ? route('tickets.show', $ticket) : route('tickets.index');
 
@@ -210,7 +215,7 @@ class TicketController extends Controller
 
         $isOperationsManager = $user->hasRole(User::ROLE_OPERATIONS_MANAGER);
 
-        if (($canTechnicianUpdate || $isOperationsManager) && ! $canEditTickets && ! $canApproveTickets) {
+        if ($canTechnicianUpdate || $isOperationsManager) {
             $action = $request->input('action', 'update_status');
 
             // Operations Manager marks ticket as completed
@@ -222,7 +227,10 @@ class TicketController extends Controller
                 $ticket->completed_at = now();
                 $ticket->save();
 
-                $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
+                $ticketForNotification = $ticket->fresh();
+                app()->terminating(function () use ($ticketForNotification, $previousStatus): void {
+                    $this->notificationService->sendTicketStatusChanged($ticketForNotification, $previousStatus);
+                });
 
                 return redirect()
                     ->route('tickets.index')
@@ -305,7 +313,9 @@ class TicketController extends Controller
                     ->with('success', 'Phase saved successfully.');
             }
 
-            // Standard status update (non-phase) - only for technicians
+            // Standard status update (non-phase) remains technician-only in this branch.
+            // Operations manager updates without a phase action should fall through
+            // to the general ticket update logic below.
             if (!$isOperationsManager) {
                 $validated = $request->validate([
                     'status' => ['required', 'in:in_progress,completed'],
@@ -327,20 +337,16 @@ class TicketController extends Controller
                 $ticket->save();
 
                 if ($previousStatus !== $ticket->status) {
-                    $this->notificationService->sendTicketStatusChanged($ticket->fresh(), $previousStatus);
+                    $ticketForNotification = $ticket->fresh();
+                    app()->terminating(function () use ($ticketForNotification, $previousStatus): void {
+                        $this->notificationService->sendTicketStatusChanged($ticketForNotification, $previousStatus);
+                    });
                 }
 
                 return redirect()
                     ->route('tickets.index')
                     ->with('success', 'Ticket status updated successfully.');
             }
-        }
-        
-        if ($isOperationsManager) {
-            // Operations manager attempted to update without phase action
-            return redirect()
-                ->route('tickets.show', $ticket)
-                ->with('error', 'Invalid action.');
         }
 
         if ($canApproveTickets && ! $canEditTickets) {
@@ -389,11 +395,17 @@ class TicketController extends Controller
             $ticket->refresh();
 
             if ((int) ($ticket->assigned_to ?? 0) !== $previousAssignedTo || $previousStatus !== $ticket->status) {
-                $this->notificationService->sendTicketAssigned($ticket);
+                $ticketForNotification = $ticket->fresh();
+                app()->terminating(function () use ($ticketForNotification): void {
+                    $this->notificationService->sendTicketAssigned($ticketForNotification);
+                });
             }
 
             if ($previousStatus !== $ticket->status) {
-                $this->notificationService->sendTicketStatusChanged($ticket, $previousStatus);
+                $ticketForNotification = $ticket->fresh(['reporter', 'technician']);
+                app()->terminating(function () use ($ticketForNotification, $previousStatus): void {
+                    $this->notificationService->sendTicketStatusChanged($ticketForNotification, $previousStatus);
+                });
             }
 
             return redirect()
@@ -439,19 +451,23 @@ class TicketController extends Controller
 
         $ticket->update($validated);
 
-        $this->notificationService->sendTicketStatusChanged($ticket->fresh(['reporter', 'technician']), $previousStatus);
-
         $this->removeSelectedAttachments($request, $ticket);
         $this->storeAttachments($request, $ticket);
 
         $ticket->refresh();
 
         if ((int) ($ticket->assigned_to ?? 0) !== $previousAssignedTo && ! empty($ticket->assigned_to)) {
-            $this->notificationService->sendTicketAssigned($ticket);
+            $ticketForNotification = $ticket->fresh();
+            app()->terminating(function () use ($ticketForNotification): void {
+                $this->notificationService->sendTicketAssigned($ticketForNotification);
+            });
         }
 
         if ($previousStatus !== $ticket->status) {
-            $this->notificationService->sendTicketStatusChanged($ticket, $previousStatus);
+            $ticketForNotification = $ticket->fresh(['reporter', 'technician']);
+            app()->terminating(function () use ($ticketForNotification, $previousStatus): void {
+                $this->notificationService->sendTicketStatusChanged($ticketForNotification, $previousStatus);
+            });
         }
 
         return redirect()
@@ -536,11 +552,17 @@ class TicketController extends Controller
         $ticket->refresh();
 
         if ((int) ($ticket->assigned_to ?? 0) !== $previousAssignedTo) {
-            $this->notificationService->sendTicketAssigned($ticket);
+            $ticketForNotification = $ticket->fresh();
+            app()->terminating(function () use ($ticketForNotification): void {
+                $this->notificationService->sendTicketAssigned($ticketForNotification);
+            });
         }
 
         if ($previousStatus !== $ticket->status) {
-            $this->notificationService->sendTicketStatusChanged($ticket->fresh(['reporter', 'technician']), $previousStatus);
+            $ticketForNotification = $ticket->fresh(['reporter', 'technician']);
+            app()->terminating(function () use ($ticketForNotification, $previousStatus): void {
+                $this->notificationService->sendTicketStatusChanged($ticketForNotification, $previousStatus);
+            });
         }
 
         if ($expectsJson) {

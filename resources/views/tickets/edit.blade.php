@@ -3,7 +3,7 @@
 @section('content')
     <h2>{{ ($reviewMode ?? false) ? 'Approve Ticket' : (($technicianMode ?? false) ? 'Ticket' : 'Edit Ticket') }} {{ $ticket->ticket_no }}</h2>
 
-    <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="card" enctype="multipart/form-data">
+    <form method="POST" action="{{ route('tickets.update', $ticket) }}" class="card" enctype="multipart/form-data" data-loader-action="{{ ($reviewMode ?? false) ? 'ticket-review' : (($technicianMode ?? false) ? 'ticket-phase' : 'ticket-update') }}">
         @csrf
         @method('PUT')
 
@@ -64,12 +64,12 @@
         @if($technicianMode ?? false)
             @if($isOperationsManager ?? false)
                 <input type="hidden" name="action" value="mark_completed">
-                <button type="submit" class="btn btn-success">Executed</button>
+                <button type="submit" class="btn btn-success" data-loader-action="ticket-mark-completed">Executed</button>
             @else
                 {{-- Technician phase buttons are already inside the technician-form partial --}}
             @endif
         @else
-            <button type="submit">{{ ($reviewMode ?? false) ? 'Submit Decision' : 'Update Status' }}</button>
+            <button type="submit" data-loader-action="{{ ($reviewMode ?? false) ? 'ticket-review' : 'ticket-update' }}">{{ ($reviewMode ?? false) ? 'Submit Decision' : 'Update Status' }}</button>
         @endif
     </form>
 @endsection

@@ -12,7 +12,7 @@
             @if($canEditTickets)
                 <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">Edit Ticket</a>
             @elseif($canApproveTickets)
-                <form method="POST" action="{{ route('tickets.review', $ticket) }}" style="display:flex; align-items:flex-end; gap:0.45rem; flex-wrap:wrap;">
+                <form method="POST" action="{{ route('tickets.review', $ticket) }}" style="display:flex; align-items:flex-end; gap:0.45rem; flex-wrap:wrap;" data-loader-action="ticket-review">
                     @csrf
                     <div style="min-width: 220px;">
                         <label for="assigned_to" class="muted" style="display:block; margin-bottom:0.25rem;">Assign Technician</label>
@@ -23,8 +23,8 @@
                             @endforeach
                         </select>
                     </div>
-                    <button type="submit" name="decision" value="approve" class="btn btn-alt">Approve</button>
-                    <button type="submit" name="decision" value="hold" class="btn btn-danger">Hold</button>
+                    <button type="submit" name="decision" value="approve" class="btn btn-alt" data-loader-action="ticket-review-approve">Approve</button>
+                    <button type="submit" name="decision" value="hold" class="btn btn-danger" data-loader-action="ticket-review-hold">Hold</button>
                 </form>
             @elseif($canTechnicianUpdate ?? false)
                 <a class="btn btn-alt" href="{{ route('tickets.edit', $ticket) }}">Update Status</a>
@@ -223,8 +223,8 @@
             </div>
 
             <div style="display:flex; gap:0.5rem;">
-                <button type="submit" name="action" value="save_phase" class="btn">Save Phase</button>
-                <button type="submit" name="action" value="complete_phase" class="btn btn-success">Complete Phase & Next</button>
+                <button type="submit" name="action" value="save_phase" class="btn" data-loader-action="ticket-phase-save">Save Phase</button>
+                <button type="submit" name="action" value="complete_phase" class="btn btn-success" data-loader-action="ticket-phase-complete">Complete Phase & Next</button>
             </div>
         </form>
     </section>

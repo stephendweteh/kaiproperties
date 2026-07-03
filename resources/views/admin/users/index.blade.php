@@ -43,16 +43,16 @@
                     <td>
                         <div class="row-actions">
                             @if(! $u->is_approved)
-                                <form method="POST" action="{{ route('admin.users.approve', $u) }}">
+                                <form method="POST" action="{{ route('admin.users.approve', $u) }}" data-loader-action="user-approve">
                                     @csrf
-                                    <button type="submit" class="btn">Approve</button>
+                                    <button type="submit" class="btn" data-loader-action="user-approve">Approve</button>
                                 </form>
                             @endif
                             <a class="btn btn-alt" href="{{ route('admin.users.edit', $u) }}">Edit</a>
-                            <form method="POST" action="{{ route('admin.users.destroy', $u) }}" onsubmit="return confirm('Delete user?')">
+                            <form method="POST" action="{{ route('admin.users.destroy', $u) }}" onsubmit="return confirm('Delete user?')" data-loader-action="user-delete">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit">Delete</button>
+                                <button type="submit" data-loader-action="user-delete">Delete</button>
                             </form>
                         </div>
                     </td>

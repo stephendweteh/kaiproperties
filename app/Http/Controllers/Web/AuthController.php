@@ -80,7 +80,9 @@ class AuthController extends Controller
             'approved_by' => null,
         ]);
 
-        $this->notificationService->sendSignupPendingApproval($user);
+        app()->terminating(function () use ($user): void {
+            $this->notificationService->sendSignupPendingApproval($user);
+        });
 
         return redirect()
             ->route('login')

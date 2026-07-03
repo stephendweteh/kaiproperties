@@ -140,8 +140,8 @@
 
         @if(!($isOperationsManager ?? false))
             <div style="display: flex; gap: 0.5rem;">
-                <button type="submit" name="action" value="save_phase" class="btn">Save Phase</button>
-                <button type="submit" name="action" value="complete_phase" class="btn btn-success">Complete Phase & Next</button>
+                <button type="submit" name="action" value="save_phase" class="btn" data-loader-action="ticket-phase-save">Save Phase</button>
+                <button type="submit" name="action" value="complete_phase" class="btn btn-success" data-loader-action="ticket-phase-complete">Complete Phase & Next</button>
             </div>
         @endif
     </div>

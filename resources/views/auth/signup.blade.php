@@ -33,7 +33,7 @@
                 <h3>Sign Up Request</h3>
                 <p class="muted">Request access. All requests go to Operations Manager.</p>
 
-                <form method="POST" action="{{ route('signup') }}" class="login-form">
+                <form method="POST" action="{{ route('signup') }}" class="login-form" data-loader-action="signup">
                     @csrf
 
                     <div class="field-group">
@@ -73,7 +73,7 @@
                         <input id="password_confirmation" type="password" name="password_confirmation" placeholder="Repeat password" required>
                     </div>
 
-                    <button type="submit" class="btn-login">Submit Request</button>
+                    <button type="submit" class="btn-login" data-loader-action="signup">Submit Request</button>
                 </form>
 
                 <p class="muted" style="margin: 0.9rem 0 0;">

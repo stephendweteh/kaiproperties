@@ -293,12 +293,47 @@
 
     (function () {
         const overlay = document.querySelector('[data-pwa-loading]');
+        const loaderActionKey = 'kai-pwa-loader-action';
+        const notificationSelector = '.alert';
+        const actionDelayMap = {
+            'ticket-create': 900,
+            'ticket-update': 900,
+            'ticket-review': 1100,
+            'ticket-review-approve': 1100,
+            'ticket-review-hold': 1300,
+            'ticket-mark-completed': 1200,
+            'ticket-phase': 1000,
+            'ticket-phase-save': 1000,
+            'ticket-phase-complete': 1300,
+            'user-create': 1000,
+            'user-update': 800,
+            'user-approve': 1100,
+            'user-delete': 1300,
+            'signup': 1200,
+            'login': 0,
+        };
 
         if (!overlay) {
             return;
         }
 
         let overlayTimer = null;
+
+        const rememberActionType = function (actionType) {
+            window.sessionStorage.setItem(loaderActionKey, actionType);
+        };
+
+        const consumeActionType = function () {
+            const actionType = window.sessionStorage.getItem(loaderActionKey) || '';
+
+            window.sessionStorage.removeItem(loaderActionKey);
+
+            return actionType;
+        };
+
+        const getActionDelay = function (actionType) {
+            return actionDelayMap[actionType] ?? 0;
+        };
 
         const hideOverlay = function () {
             overlay.classList.remove('is-active');
@@ -310,20 +345,42 @@
             }
         };
 
-        const showOverlay = function () {
+        const showOverlay = function (actionType = '') {
             overlay.classList.add('is-active');
             overlay.style.display = 'flex';
+            rememberActionType(actionType);
 
             if (overlayTimer) {
                 window.clearTimeout(overlayTimer);
             }
+        };
 
-            overlayTimer = window.setTimeout(hideOverlay, 8000);
+        const hideOverlayAfterNotifications = function () {
+            if (!document.querySelector(notificationSelector)) {
+                hideOverlay();
+                return;
+            }
+
+            const actionType = consumeActionType();
+            const notificationDelay = getActionDelay(actionType);
+
+            if (notificationDelay > 0) {
+                overlayTimer = window.setTimeout(hideOverlay, notificationDelay);
+                return;
+            }
+
+            hideOverlay();
         };
 
         document.addEventListener('submit', function (event) {
             if (event.target instanceof HTMLFormElement) {
-                showOverlay();
+                const submitter = event.submitter instanceof HTMLElement
+                    ? event.submitter
+                    : document.activeElement instanceof HTMLElement
+                        ? document.activeElement
+                        : null;
+
+                showOverlay(submitter?.dataset.loaderAction || event.target.dataset.loaderAction || '');
             }
         }, true);
 
@@ -365,19 +422,14 @@
                 return;
             }
 
-            showOverlay();
+            showOverlay(link.dataset.loaderAction || '');
         }, true);
 
-        window.addEventListener('beforeunload', showOverlay);
-        document.addEventListener('DOMContentLoaded', hideOverlay);
-        window.addEventListener('load', hideOverlay);
-        window.addEventListener('pageshow', hideOverlay);
-
-        document.addEventListener('readystatechange', function () {
-            if (document.readyState === 'complete') {
-                hideOverlay();
-            }
+        window.addEventListener('beforeunload', function () {
+            showOverlay(window.sessionStorage.getItem(loaderActionKey) || '');
         });
+        window.addEventListener('load', hideOverlayAfterNotifications);
+        window.addEventListener('pageshow', hideOverlayAfterNotifications);
     })();
 
 </script>
