@@ -250,4 +250,70 @@ class OperationsManagerRoleTest extends TestCase
         $this->assertSame('in_progress', $ticket->status);
         $this->assertNotNull($ticket->started_at);
     }
+
+    public function test_operations_manager_can_comment_on_existing_technician_phase_via_web(): void
+    {
+        $operationsManager = User::create([
+            'name' => 'Operations Manager',
+            'email' => 'ops.phase.comment@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_OPERATIONS_MANAGER,
+        ]);
+
+        $technician = User::create([
+            'name' => 'Tech Phase',
+            'email' => 'tech.phase@kai.local',
+            'password' => 'password',
+            'role' => User::ROLE_TECHNICIAN,
+        ]);
+
+        $property = Property::create([
+            'name' => 'Kai Phase',
+            'code' => 'KAI-PHS',
+            'city' => 'Accra',
+            'state' => 'Greater Accra',
+            'address' => 'Phase Road',
+            'is_active' => true,
+        ]);
+
+        $category = MaintenanceCategory::create([
+            'name' => 'Electrical',
+            'description' => 'Electrical issues',
+            'is_active' => true,
+        ]);
+
+        $ticket = Ticket::create([
+            'title' => 'Phase comment request',
+            'description' => 'Manager should comment on technician phase',
+            'property_id' => $property->id,
+            'maintenance_category_id' => $category->id,
+            'reported_by' => $operationsManager->id,
+            'assigned_to' => $technician->id,
+            'status' => 'in_progress',
+            'priority' => 'medium',
+            'started_at' => now(),
+        ]);
+
+        $phase = $ticket->phases()->create([
+            'phase_name' => 'Phase 1',
+            'phase_number' => 1,
+            'status' => 'completed',
+            'technician_notes' => 'Repaired and tested by technician.',
+            'started_at' => now()->subHour(),
+            'completed_at' => now(),
+        ]);
+
+        $this->actingAs($operationsManager)
+            ->put(route('tickets.update', $ticket), [
+                'action' => 'save_phase_comment',
+                'phase_id' => $phase->id,
+                'manager_notes' => 'Reviewed and approved the work.',
+            ])
+            ->assertRedirect(route('tickets.show', $ticket));
+
+        $phase->refresh();
+
+        $this->assertStringContainsString('Reviewed and approved the work.', $phase->manager_notes ?? '');
+        $this->assertStringContainsString('Operations Manager', $phase->manager_notes ?? '');
+    }
 }

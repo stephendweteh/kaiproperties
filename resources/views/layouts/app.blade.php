@@ -305,6 +305,7 @@
             'ticket-phase': 1000,
             'ticket-phase-save': 1000,
             'ticket-phase-complete': 1300,
+            'ticket-phase-comment': 900,
             'user-create': 1000,
             'user-update': 800,
             'user-approve': 1100,

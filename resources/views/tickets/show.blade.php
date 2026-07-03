@@ -133,6 +133,7 @@
                         <th style="padding:0.75rem; text-align:left;">Phase</th>
                         <th style="padding:0.75rem; text-align:left;">Status</th>
                         <th style="padding:0.75rem; text-align:left;">Notes</th>
+                        <th style="padding:0.75rem; text-align:left;">Manager Comment</th>
                         <th style="padding:0.75rem; text-align:left;">Files</th>
                         <th style="padding:0.75rem; text-align:left;">Started</th>
                         <th style="padding:0.75rem; text-align:left;">Completed</th>
@@ -146,6 +147,25 @@
                             <span class="status-pill status-{{ $phase->status }}">{{ str($phase->status)->replace('_',' ')->title() }}</span>
                         </td>
                         <td style="padding:0.75rem; max-width:300px; white-space:pre-wrap;">{{ $phase->technician_notes ?: '-' }}</td>
+                        <td style="padding:0.75rem; max-width:320px; white-space:pre-wrap;">
+                            @if($phase->manager_notes)
+                                <div style="margin-bottom:0.75rem; white-space:pre-wrap;">{{ $phase->manager_notes }}</div>
+                            @else
+                                <div class="muted" style="margin-bottom:0.75rem;">-</div>
+                            @endif
+
+                            <form method="POST" action="{{ route('tickets.update', $ticket) }}" style="display:flex; flex-direction:column; gap:0.45rem;">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="action" value="save_phase_comment">
+                                <input type="hidden" name="phase_id" value="{{ $phase->id }}">
+                                <textarea
+                                    name="manager_notes"
+                                    placeholder="Add an operations manager comment..."
+                                    style="min-height:90px;">{{ old('manager_notes') }}</textarea>
+                                <button type="submit" class="btn btn-alt" data-loader-action="ticket-phase-comment">Add Comment</button>
+                            </form>
+                        </td>
                         <td style="padding:0.75rem;">
                             @if($phase->attachments->isNotEmpty())
                                 <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">

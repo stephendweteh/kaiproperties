@@ -218,6 +218,36 @@ class TicketController extends Controller
         if ($canTechnicianUpdate || $isOperationsManager) {
             $action = $request->input('action', 'update_status');
 
+            if ($isOperationsManager && $action === 'save_phase_comment') {
+                $validated = $request->validate([
+                    'phase_id' => ['required', 'exists:ticket_phases,id'],
+                    'manager_notes' => ['required', 'string'],
+                ]);
+
+                $phase = $ticket->phases()
+                    ->whereKey($validated['phase_id'])
+                    ->first();
+
+                if (! $phase) {
+                    return back()->withErrors(['phase_id' => 'Selected phase does not belong to this ticket.'])->withInput();
+                }
+
+                $existingNotes = trim((string) ($phase->manager_notes ?? ''));
+                $newNotes = trim($validated['manager_notes']);
+                $timestamp = now()->format('Y-m-d H:i');
+                $entry = "[Operations Manager {$timestamp}] {$newNotes}";
+
+                $phase->update([
+                    'manager_notes' => $existingNotes !== ''
+                        ? $existingNotes.PHP_EOL.PHP_EOL.$entry
+                        : $entry,
+                ]);
+
+                return redirect()
+                    ->route('tickets.show', $ticket)
+                    ->with('success', 'Phase comment added successfully.');
+            }
+
             // Operations Manager marks ticket as completed
             if ($action === 'mark_completed') {
                 if (! $ticket->started_at) {

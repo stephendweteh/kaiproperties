@@ -14,6 +14,7 @@ class TicketPhase extends Model
         'phase_number',
         'description',
         'technician_notes',
+        'manager_notes',
         'started_at',
         'completed_at',
         'status',
