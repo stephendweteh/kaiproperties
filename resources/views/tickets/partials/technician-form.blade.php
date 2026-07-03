@@ -40,6 +40,7 @@
                             <th style="padding: 0.75rem; text-align: left;">Phase</th>
                             <th style="padding: 0.75rem; text-align: left;">Status</th>
                             <th style="padding: 0.75rem; text-align: left;">Notes</th>
+                            <th style="padding: 0.75rem; text-align: left;">Manager Comment</th>
                             <th style="padding: 0.75rem; text-align: left;">Files</th>
                             <th style="padding: 0.75rem; text-align: left;">Started</th>
                             <th style="padding: 0.75rem; text-align: left;">Completed</th>
@@ -55,6 +56,13 @@
                                 <td style="padding: 0.75rem; max-width: 300px;">
                                     @if($phase->technician_notes)
                                         <small>{{ Str::limit($phase->technician_notes, 50) }}</small>
+                                    @else
+                                        <small class="muted">-</small>
+                                    @endif
+                                </td>
+                                <td style="padding: 0.75rem; max-width: 320px;">
+                                    @if($phase->manager_notes)
+                                        <small style="white-space: pre-wrap;">{{ Str::limit($phase->manager_notes, 80) }}</small>
                                     @else
                                         <small class="muted">-</small>
                                     @endif
@@ -82,7 +90,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" style="padding: 1rem; text-align: center; color: #999;">No phases yet</td>
+                                <td colspan="7" style="padding: 1rem; text-align: center; color: #999;">No phases yet</td>
                             </tr>
                         @endforelse
                     </tbody>
