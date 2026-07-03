@@ -123,11 +123,11 @@
         @endif
     </section>
 
-    @if(($isOperationsManager ?? false) && $ticket->phases->isNotEmpty())
+    @if((($isOperationsManager ?? false) || ($isTechnician ?? false)) && $ticket->phases->isNotEmpty())
     <section class="card">
         <h3 style="margin-top:0;">Technician Work Progress — {{ $ticket->technician?->name ?? 'Unassigned' }}</h3>
         <div class="table-wrap" style="margin-bottom:1rem;">
-            <table style="width:100%; border-collapse:collapse;">
+            <table style="width:100%; min-width:1280px; border-collapse:collapse; table-layout:auto;">
                 <thead>
                     <tr style="background:#f5f5f5; border-bottom:2px solid #ddd;">
                         <th style="padding:0.75rem; text-align:left;">Phase</th>
@@ -146,25 +146,27 @@
                         <td style="padding:0.75rem;">
                             <span class="status-pill status-{{ $phase->status }}">{{ str($phase->status)->replace('_',' ')->title() }}</span>
                         </td>
-                        <td style="padding:0.75rem; max-width:300px; white-space:pre-wrap;">{{ $phase->technician_notes ?: '-' }}</td>
-                        <td style="padding:0.75rem; max-width:320px; white-space:pre-wrap;">
+                        <td style="padding:0.75rem; max-width:360px; white-space:pre-wrap; word-break:break-word; text-align:left; vertical-align:top;">{{ $phase->technician_notes ?: '-' }}</td>
+                        <td style="padding:0.75rem; max-width:380px; white-space:pre-wrap; word-break:break-word; text-align:left; vertical-align:top;">
                             @if($phase->manager_notes)
-                                <div style="margin-bottom:0.75rem; white-space:pre-wrap;">{{ $phase->manager_notes }}</div>
+                                <div style="margin-bottom:0.75rem; white-space:pre-wrap; text-align:left;">{{ $phase->manager_notes }}</div>
                             @else
                                 <div class="muted" style="margin-bottom:0.75rem;">-</div>
                             @endif
 
-                            <form method="POST" action="{{ route('tickets.update', $ticket) }}" style="display:flex; flex-direction:column; gap:0.45rem;">
-                                @csrf
-                                @method('PUT')
-                                <input type="hidden" name="action" value="save_phase_comment">
-                                <input type="hidden" name="phase_id" value="{{ $phase->id }}">
-                                <textarea
-                                    name="manager_notes"
-                                    placeholder="Add an operations manager comment..."
-                                    style="min-height:90px;">{{ old('manager_notes') }}</textarea>
-                                <button type="submit" class="btn btn-alt" data-loader-action="ticket-phase-comment">Add Comment</button>
-                            </form>
+                            @if($isOperationsManager ?? false)
+                                <form method="POST" action="{{ route('tickets.update', $ticket) }}" style="display:flex; flex-direction:column; gap:0.45rem; align-items:flex-start;">
+                                    @csrf
+                                    @method('PUT')
+                                    <input type="hidden" name="action" value="save_phase_comment">
+                                    <input type="hidden" name="phase_id" value="{{ $phase->id }}">
+                                    <textarea
+                                        name="manager_notes"
+                                        placeholder="Add an operations manager comment..."
+                                        style="min-height:90px; width:100%; text-align:left;">{{ old('manager_notes') }}</textarea>
+                                    <button type="submit" class="btn btn-alt" data-loader-action="ticket-phase-comment">Add Comment</button>
+                                </form>
+                            @endif
                         </td>
                         <td style="padding:0.75rem;">
                             @if($phase->attachments->isNotEmpty())

@@ -34,7 +34,7 @@
     @if(!$ticket->phases->isEmpty())
         <div style="margin-bottom: 2rem;">
             <div class="table-wrap">
-                <table style="width: 100%; border-collapse: collapse;">
+                <table style="width: 100%; min-width: 1280px; border-collapse: collapse; table-layout: auto;">
                     <thead>
                         <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
                             <th style="padding: 0.75rem; text-align: left;">Phase</th>
@@ -53,16 +53,16 @@
                                 <td style="padding: 0.75rem;">
                                     <span class="status-pill status-{{ $phase->status }}">{{ str($phase->status)->replace('_', ' ')->title() }}</span>
                                 </td>
-                                <td style="padding: 0.75rem; max-width: 300px;">
+                                <td style="padding: 0.75rem; max-width: 360px; white-space: pre-wrap; word-break: break-word; text-align: left; vertical-align: top;">
                                     @if($phase->technician_notes)
-                                        <small>{{ Str::limit($phase->technician_notes, 50) }}</small>
+                                        <small style="display:block; text-align:left; white-space:pre-wrap;">{{ $phase->technician_notes }}</small>
                                     @else
                                         <small class="muted">-</small>
                                     @endif
                                 </td>
-                                <td style="padding: 0.75rem; max-width: 320px;">
+                                <td style="padding: 0.75rem; max-width: 380px; white-space: pre-wrap; word-break: break-word; text-align: left; vertical-align: top;">
                                     @if($phase->manager_notes)
-                                        <small style="white-space: pre-wrap;">{{ Str::limit($phase->manager_notes, 80) }}</small>
+                                        <small style="display:block; text-align:left; white-space:pre-wrap;">{{ $phase->manager_notes }}</small>
                                     @else
                                         <small class="muted">-</small>
                                     @endif

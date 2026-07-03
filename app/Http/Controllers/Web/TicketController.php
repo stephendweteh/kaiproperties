@@ -119,6 +119,7 @@ class TicketController extends Controller
             'canEditTickets' => $this->canEditTickets($user),
             'canApproveTickets' => $canApproveTickets,
             'canTechnicianUpdate' => $this->canTechnicianUpdateStatus($user, $ticket),
+            'isTechnician' => $user->hasRole(User::ROLE_TECHNICIAN),
             'isOperationsManager' => $user->hasRole(User::ROLE_OPERATIONS_MANAGER),
             'technicians' => $canApproveTickets
                 ? User::where('role', User::ROLE_TECHNICIAN)->orderBy('name')->get()
