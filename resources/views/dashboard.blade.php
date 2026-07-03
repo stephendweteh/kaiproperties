@@ -82,6 +82,86 @@
             font-size: 0.84rem;
             color: #627d98;
         }
+
+        .dashboard-pie-layout {
+            display: grid;
+            grid-template-columns: minmax(220px, 300px) 1fr;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .dashboard-pie-wrap {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dashboard-pie-chart {
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: inset 0 0 0 1px rgba(16, 42, 67, 0.08);
+        }
+
+        .dashboard-pie-chart::after {
+            content: '';
+            position: absolute;
+            inset: 50%;
+            transform: translate(-50%, -50%);
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 0 0 1px rgba(16, 42, 67, 0.06);
+        }
+
+        .dashboard-pie-center {
+            position: absolute;
+            inset: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            text-align: center;
+        }
+
+        .dashboard-pie-total {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #102a43;
+        }
+
+        .dashboard-pie-label {
+            font-size: 0.72rem;
+            color: #627d98;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .dashboard-pie-legend {
+            display: grid;
+            gap: 0.7rem;
+        }
+
+        .dashboard-pie-legend-item {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 0.65rem;
+            align-items: center;
+            padding-bottom: 0.55rem;
+            border-bottom: 1px solid #eef2f6;
+        }
+
+        .dashboard-pie-swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+        }
+
+        @media (max-width: 820px) {
+            .dashboard-pie-layout {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 
     <h2>Operations Dashboard</h2>
@@ -246,27 +326,67 @@
 
     <section class="card" style="margin-top: 1rem;">
         <h3>Property Statistics</h3>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                <tr>
-                    <th>Property</th>
-                    <th>Total Tickets</th>
-                </tr>
-                </thead>
-                <tbody>
-                @forelse($propertyStats as $entry)
-                    <tr>
-                        <td>{{ $entry->name }}</td>
-                        <td>{{ $entry->tickets_count }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="2">No properties found.</td>
-                    </tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
+        @php
+            $propertyChartPalette = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2', '#ea580c', '#4f46e5'];
+            $propertyTicketTotal = max((int) $propertyStats->sum('tickets_count'), 0);
+            $pieSegments = [];
+            $offset = 0;
+
+            foreach ($propertyStats as $index => $entry) {
+                $value = (int) $entry->tickets_count;
+
+                if ($value <= 0 || $propertyTicketTotal === 0) {
+                    continue;
+                }
+
+                $degrees = ($value / $propertyTicketTotal) * 360;
+                $color = $propertyChartPalette[$index % count($propertyChartPalette)];
+                $pieSegments[] = [
+                    'name' => $entry->name,
+                    'value' => $value,
+                    'color' => $color,
+                    'percentage' => (int) round(($value / $propertyTicketTotal) * 100),
+                    'start' => $offset,
+                    'end' => $offset + $degrees,
+                ];
+                $offset += $degrees;
+            }
+
+            $pieBackground = count($pieSegments) > 0
+                ? collect($pieSegments)
+                    ->map(fn ($segment) => $segment['color'].' '.$segment['start'].'deg '.$segment['end'].'deg')
+                    ->implode(', ')
+                : '#e7edf3';
+        @endphp
+
+        @if($propertyStats->isEmpty())
+            <p class="muted" style="margin:0;">No properties found.</p>
+        @else
+            <div class="dashboard-pie-layout">
+                <div class="dashboard-pie-wrap">
+                    <div class="dashboard-pie-chart" style="background: conic-gradient({{ $pieBackground }});">
+                        <div class="dashboard-pie-center">
+                            <div class="dashboard-pie-total">{{ $propertyTicketTotal }}</div>
+                            <div class="dashboard-pie-label">Tickets</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-pie-legend">
+                    @forelse($pieSegments as $segment)
+                        <div class="dashboard-pie-legend-item">
+                            <span class="dashboard-pie-swatch" style="background: {{ $segment['color'] }};"></span>
+                            <div>
+                                <div>{{ $segment['name'] }}</div>
+                                <div class="dashboard-mini-note">{{ $segment['percentage'] }}% of property tickets</div>
+                            </div>
+                            <div>{{ $segment['value'] }}</div>
+                        </div>
+                    @empty
+                        <p class="muted" style="margin:0;">No ticket activity recorded for properties yet.</p>
+                    @endforelse
+                </div>
+            </div>
+        @endif
     </section>
 @endsection

@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Property;
 use App\Models\Ticket;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -28,19 +30,54 @@ class DashboardController extends Controller
             'closed' => (clone $baseQuery)->where('status', 'closed')->count(),
         ];
 
-        $customerMetrics = [
-            'total' => Customer::query()->count(),
-            'active' => Customer::query()->where('is_active', true)->count(),
-            'with_properties' => Customer::query()->has('properties')->count(),
-            'without_properties' => Customer::query()->doesntHave('properties')->count(),
-        ];
+        try {
+            $hasCustomersTable = Schema::hasTable('customers');
+            $hasPropertiesCustomerId = Schema::hasColumn('properties', 'customer_id');
+        } catch (QueryException) {
+            $hasCustomersTable = false;
+            $hasPropertiesCustomerId = false;
+        }
 
-        $propertyMetrics = [
-            'total' => Property::query()->count(),
-            'active' => Property::query()->where('is_active', true)->count(),
-            'assigned' => Property::query()->whereNotNull('customer_id')->count(),
-            'unassigned' => Property::query()->whereNull('customer_id')->count(),
-        ];
+        try {
+            $customerMetrics = $hasCustomersTable
+                ? [
+                    'total' => Customer::query()->count(),
+                    'active' => Customer::query()->where('is_active', true)->count(),
+                    'with_properties' => $hasPropertiesCustomerId ? Customer::query()->has('properties')->count() : 0,
+                    'without_properties' => $hasPropertiesCustomerId ? Customer::query()->doesntHave('properties')->count() : Customer::query()->count(),
+                ]
+                : [
+                    'total' => 0,
+                    'active' => 0,
+                    'with_properties' => 0,
+                    'without_properties' => 0,
+                ];
+        } catch (QueryException) {
+            $customerMetrics = [
+                'total' => 0,
+                'active' => 0,
+                'with_properties' => 0,
+                'without_properties' => 0,
+            ];
+            $hasCustomersTable = false;
+        }
+
+        try {
+            $propertyMetrics = [
+                'total' => Property::query()->count(),
+                'active' => Property::query()->where('is_active', true)->count(),
+                'assigned' => $hasPropertiesCustomerId ? Property::query()->whereNotNull('customer_id')->count() : 0,
+                'unassigned' => $hasPropertiesCustomerId ? Property::query()->whereNull('customer_id')->count() : Property::query()->count(),
+            ];
+        } catch (QueryException) {
+            $propertyMetrics = [
+                'total' => Property::query()->count(),
+                'active' => Property::query()->where('is_active', true)->count(),
+                'assigned' => 0,
+                'unassigned' => Property::query()->count(),
+            ];
+            $hasPropertiesCustomerId = false;
+        }
 
         $ticketStatusBreakdown = collect([
             ['label' => 'Logged/New', 'value' => $metrics['new'], 'class' => 'status-logged'],
@@ -70,14 +107,20 @@ class DashboardController extends Controller
             ->orderBy('properties.name')
             ->get();
 
-        $topCustomers = Customer::query()
-            ->select('customers.name', DB::raw('COUNT(properties.id) as properties_count'))
-            ->leftJoin('properties', 'properties.customer_id', '=', 'customers.id')
-            ->groupBy('customers.id', 'customers.name')
-            ->orderByDesc('properties_count')
-            ->orderBy('customers.name')
-            ->limit(8)
-            ->get();
+        try {
+            $topCustomers = ($hasCustomersTable && $hasPropertiesCustomerId)
+                ? Customer::query()
+                    ->select('customers.name', DB::raw('COUNT(properties.id) as properties_count'))
+                    ->leftJoin('properties', 'properties.customer_id', '=', 'customers.id')
+                    ->groupBy('customers.id', 'customers.name')
+                    ->orderByDesc('properties_count')
+                    ->orderBy('customers.name')
+                    ->limit(8)
+                    ->get()
+                : collect();
+        } catch (QueryException) {
+            $topCustomers = collect();
+        }
 
         return view('dashboard', [
             'metrics' => $metrics,
