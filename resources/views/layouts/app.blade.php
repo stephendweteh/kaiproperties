@@ -77,6 +77,15 @@
                     \App\Models\User::ROLE_ADMIN,
                     \App\Models\User::ROLE_OPERATIONS_MANAGER,
                 ]))
+                    <a class="{{ request()->routeIs('admin.customers.*') ? 'active' : '' }}" href="{{ route('admin.customers.index') }}">
+                        <span class="nav-link-inner">
+                            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <circle cx="12" cy="8" r="4"></circle>
+                                <path d="M4 20c1.8-4 5-6 8-6s6.2 2 8 6"></path>
+                            </svg>
+                            <span>Customers</span>
+                        </span>
+                    </a>
                     <a class="{{ request()->routeIs('admin.properties.*') ? 'active' : '' }}" href="{{ route('admin.properties.index') }}">
                         <span class="nav-link-inner">
                             <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">

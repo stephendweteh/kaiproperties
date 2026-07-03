@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Web\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Web\Admin\PropertyController as AdminPropertyController;
 use App\Http\Controllers\Web\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Web\Admin\UserController as AdminUserController;
@@ -59,6 +60,7 @@ Route::middleware('auth')->group(function (): void {
 	Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
 	Route::prefix('admin')->name('admin.')->middleware('admin')->group(function (): void {
+		Route::resource('customers', AdminCustomerController::class);
 		Route::resource('properties', AdminPropertyController::class)->except(['show']);
 		Route::resource('categories', AdminCategoryController::class)->except(['show']);
 		Route::resource('users', AdminUserController::class)->except(['show']);

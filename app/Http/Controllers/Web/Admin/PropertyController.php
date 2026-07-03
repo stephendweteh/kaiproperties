@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\Customer;
 use App\Models\Property;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -32,7 +33,11 @@ class PropertyController extends Controller
         }
 
         return view('admin.properties.index', [
-            'properties' => Property::query()->orderBy('name')->paginate(20)->withQueryString(),
+            'properties' => Property::query()
+                ->with('customer:id,name')
+                ->orderBy('name')
+                ->paginate(20)
+                ->withQueryString(),
             'recentAudits' => $auditQuery
                 ->latest('created_at')
                 ->latest('id')
@@ -47,7 +52,9 @@ class PropertyController extends Controller
      */
     public function create()
     {
-        return view('admin.properties.create');
+        return view('admin.properties.create', [
+            'customers' => Customer::query()->where('is_active', true)->orderBy('name')->get(),
+        ]);
     }
 
     /**
@@ -61,6 +68,7 @@ class PropertyController extends Controller
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
             'address' => ['nullable', 'string', 'max:255'],
+            'customer_id' => ['nullable', 'exists:customers,id'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
@@ -76,7 +84,10 @@ class PropertyController extends Controller
      */
     public function edit(Property $property)
     {
-        return view('admin.properties.edit', ['property' => $property]);
+        return view('admin.properties.edit', [
+            'property' => $property,
+            'customers' => Customer::query()->where('is_active', true)->orderBy('name')->get(),
+        ]);
     }
 
     /**
@@ -90,6 +101,7 @@ class PropertyController extends Controller
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
             'address' => ['nullable', 'string', 'max:255'],
+            'customer_id' => ['nullable', 'exists:customers,id'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 

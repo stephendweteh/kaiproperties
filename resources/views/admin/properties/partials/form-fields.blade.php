@@ -15,6 +15,17 @@
         <label for="state">State</label>
         <input id="state" type="text" name="state" value="{{ old('state', $property->state ?? '') }}">
     </div>
+    <div>
+        <label for="customer_id">Customer</label>
+        <select id="customer_id" name="customer_id">
+            <option value="">Unassigned</option>
+            @foreach(($customers ?? collect()) as $customer)
+                <option value="{{ $customer->id }}" @selected((string) old('customer_id', $property->customer_id ?? '') === (string) $customer->id)>
+                    {{ $customer->name }}
+                </option>
+            @endforeach
+        </select>
+    </div>
 </div>
 
 <div style="margin-bottom: 0.8rem;">
