@@ -122,9 +122,127 @@
 <div class="card" style="margin-bottom: 1rem;">
     <h3 style="margin-top: 0;">Attachments</h3>
 
+    <style>
+        .attachment-dropzone {
+            border: 2px dashed #c8d3df;
+            border-radius: 10px;
+            padding: 0.85rem;
+            background: #f9fbfd;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+
+        .attachment-dropzone.is-dragover {
+            border-color: #1f7ae0;
+            background: #eef5ff;
+        }
+
+        .attachment-preview-list {
+            margin-top: 0.55rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .attachment-preview-item {
+            position: relative;
+            border: 1px solid #d6dee8;
+            border-radius: 8px;
+            background: #fff;
+            padding: 0.35rem;
+            overflow: hidden;
+        }
+
+        .attachment-preview-item img {
+            width: 100%;
+            height: 78px;
+            object-fit: cover;
+            border-radius: 6px;
+            display: block;
+            background: #f0f4f8;
+        }
+
+        .attachment-preview-name {
+            display: block;
+            margin-top: 0.35rem;
+            font-size: 0.72rem;
+            color: #42566a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .attachment-preview-remove {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: none;
+            background: #d93025;
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .attachment-preview-remove:hover {
+            background: #b42318;
+        }
+
+        .attachment-file-list {
+            margin-top: 0.55rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+
+        .attachment-file-chip {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            max-width: 260px;
+            border: 1px solid #d6dee8;
+            border-radius: 999px;
+            padding: 0.28rem 0.7rem 0.28rem 0.5rem;
+            background: #fff;
+            font-size: 0.78rem;
+            color: #33485d;
+        }
+
+        .attachment-file-chip .attachment-preview-name {
+            margin: 0;
+            max-width: 190px;
+            font-size: 0.78rem;
+        }
+
+        .attachment-file-remove {
+            border: none;
+            background: #d93025;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 0.35rem;
+            border-radius: 999px;
+        }
+
+        .attachment-file-remove:hover {
+            background: #b42318;
+        }
+    </style>
+
     <div style="margin-bottom: 0.8rem;">
         <label for="image_attachments">Upload Pictures</label>
-        <input id="image_attachments" type="file" name="image_attachments[]" accept="image/*" multiple>
+        <div class="attachment-dropzone" data-dropzone="image_attachments" tabindex="0" role="button" aria-label="Upload pictures by clicking or dragging files here">
+            <p class="muted" style="margin: 0 0 0.5rem; font-size: 0.88rem;">Drag and drop images here, or click to browse.</p>
+            <input id="image_attachments" type="file" name="image_attachments[]" accept="image/*" multiple>
+            <p class="muted" data-file-summary="image_attachments" style="margin: 0.45rem 0 0; font-size: 0.82rem;">No files selected.</p>
+            <div class="attachment-preview-list" data-preview="image_attachments"></div>
+        </div>
         <p class="muted" style="margin: 0.35rem 0 0; font-size: 0.88rem;">Accepted image formats up to 5MB each.</p>
     </div>
 
@@ -136,9 +254,203 @@
 
     <div style="margin-bottom: 0.4rem;">
         <label for="document_attachments">Upload Documents</label>
-        <input id="document_attachments" type="file" name="document_attachments[]" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" multiple>
+        <div class="attachment-dropzone" data-dropzone="document_attachments" tabindex="0" role="button" aria-label="Upload documents by clicking or dragging files here">
+            <p class="muted" style="margin: 0 0 0.5rem; font-size: 0.88rem;">Drag and drop documents here, or click to browse.</p>
+            <input id="document_attachments" type="file" name="document_attachments[]" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" multiple>
+            <p class="muted" data-file-summary="document_attachments" style="margin: 0.45rem 0 0; font-size: 0.82rem;">No files selected.</p>
+            <div class="attachment-file-list" data-preview="document_attachments"></div>
+        </div>
         <p class="muted" style="margin: 0.35rem 0 0; font-size: 0.88rem;">PDF, DOC, DOCX, XLS, XLSX, TXT, CSV up to 10MB each.</p>
     </div>
+
+    <script>
+        (function () {
+            const setupDropzone = function (inputId, label) {
+                const input = document.getElementById(inputId);
+                const zone = document.querySelector('[data-dropzone="' + inputId + '"]');
+                const summary = document.querySelector('[data-file-summary="' + inputId + '"]');
+                const preview = document.querySelector('[data-preview="' + inputId + '"]');
+
+                if (!input || !zone || !summary || !preview) {
+                    return;
+                }
+
+                const updateSummary = function () {
+                    const count = input.files ? input.files.length : 0;
+                    summary.textContent = count > 0
+                        ? count + ' ' + label + (count > 1 ? 's selected.' : ' selected.')
+                        : 'No files selected.';
+                };
+
+                const setFiles = function (files) {
+                    const transfer = new DataTransfer();
+                    Array.from(files).forEach(function (file) {
+                        transfer.items.add(file);
+                    });
+                    input.files = transfer.files;
+                };
+
+                const removeFileAt = function (index) {
+                    if (!input.files || index < 0 || index >= input.files.length) {
+                        return;
+                    }
+
+                    const remaining = Array.from(input.files).filter(function (_file, fileIndex) {
+                        return fileIndex !== index;
+                    });
+
+                    setFiles(remaining);
+                    updateSummary();
+                    renderPreview();
+                };
+
+                const renderPreview = function () {
+                    preview.innerHTML = '';
+
+                    if (!input.files || input.files.length === 0) {
+                        return;
+                    }
+
+                    Array.from(input.files).forEach(function (file, fileIndex) {
+                        if (inputId === 'image_attachments') {
+                            const item = document.createElement('div');
+                            item.className = 'attachment-preview-item';
+
+                            const removeBtn = document.createElement('button');
+                            removeBtn.type = 'button';
+                            removeBtn.className = 'attachment-preview-remove';
+                            removeBtn.setAttribute('aria-label', 'Remove file');
+                            removeBtn.textContent = 'x';
+                            removeBtn.addEventListener('click', function (event) {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                removeFileAt(fileIndex);
+                            });
+
+                            const image = document.createElement('img');
+                            const imageUrl = URL.createObjectURL(file);
+                            image.src = imageUrl;
+                            image.alt = file.name;
+                            image.addEventListener('load', function () {
+                                URL.revokeObjectURL(imageUrl);
+                            });
+
+                            const name = document.createElement('span');
+                            name.className = 'attachment-preview-name';
+                            name.textContent = file.name;
+
+                            item.appendChild(removeBtn);
+                            item.appendChild(image);
+                            item.appendChild(name);
+                            preview.appendChild(item);
+                            return;
+                        }
+
+                        const chip = document.createElement('div');
+                        chip.className = 'attachment-file-chip';
+
+                        const icon = document.createElement('span');
+                        icon.textContent = 'FILE';
+
+                        const name = document.createElement('span');
+                        name.className = 'attachment-preview-name';
+                        name.textContent = file.name;
+
+                        const removeBtn = document.createElement('button');
+                        removeBtn.type = 'button';
+                        removeBtn.className = 'attachment-file-remove';
+                        removeBtn.setAttribute('aria-label', 'Remove file');
+                        removeBtn.textContent = 'x';
+                        removeBtn.addEventListener('click', function (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            removeFileAt(fileIndex);
+                        });
+
+                        chip.appendChild(icon);
+                        chip.appendChild(name);
+                        chip.appendChild(removeBtn);
+                        preview.appendChild(chip);
+                    });
+                };
+
+                const mergeFiles = function (incomingFiles) {
+                    const transfer = new DataTransfer();
+
+                    if (input.files) {
+                        Array.from(input.files).forEach(function (file) {
+                            transfer.items.add(file);
+                        });
+                    }
+
+                    Array.from(incomingFiles).forEach(function (file) {
+                        transfer.items.add(file);
+                    });
+
+                    input.files = transfer.files;
+                    updateSummary();
+                    renderPreview();
+                };
+
+                const preventDefaults = function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                };
+
+                ['dragenter', 'dragover'].forEach(function (name) {
+                    zone.addEventListener(name, function (event) {
+                        preventDefaults(event);
+                        zone.classList.add('is-dragover');
+                    });
+                });
+
+                ['dragleave', 'drop'].forEach(function (name) {
+                    zone.addEventListener(name, function (event) {
+                        preventDefaults(event);
+                        zone.classList.remove('is-dragover');
+                    });
+                });
+
+                zone.addEventListener('drop', function (event) {
+                    const files = event.dataTransfer ? event.dataTransfer.files : null;
+                    if (!files || files.length === 0) {
+                        return;
+                    }
+
+                    mergeFiles(files);
+                });
+
+                zone.addEventListener('click', function (event) {
+                    if (event.target && event.target.closest('.attachment-preview-remove, .attachment-file-remove')) {
+                        return;
+                    }
+
+                    if (event.target && event.target.tagName === 'INPUT') {
+                        return;
+                    }
+
+                    input.click();
+                });
+
+                zone.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        input.click();
+                    }
+                });
+
+                input.addEventListener('change', function () {
+                    updateSummary();
+                    renderPreview();
+                });
+                updateSummary();
+                renderPreview();
+            };
+
+            setupDropzone('image_attachments', 'image file');
+            setupDropzone('document_attachments', 'document file');
+        })();
+    </script>
 
     @if($editMode)
         <div style="margin-top: 1rem;">
