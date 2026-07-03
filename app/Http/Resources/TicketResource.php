@@ -24,6 +24,7 @@ class TicketResource extends JsonResource
             'priority' => $this->priority,
             'etd' => $this->etd?->toIso8601String(),
             'estimated_cost' => $this->estimated_cost !== null ? (string) $this->estimated_cost : null,
+            'estimated_cost_currency' => $this->estimated_cost_currency,
             'started_at' => $this->started_at?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'closed_at' => $this->closed_at?->toIso8601String(),

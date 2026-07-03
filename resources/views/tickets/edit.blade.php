@@ -38,7 +38,12 @@
                 </div>
                 <div>
                     <label>Estimated Cost</label>
-                    <input type="text" value="{{ $ticket->estimated_cost !== null ? number_format((float) $ticket->estimated_cost, 2) : '-' }}" disabled>
+                    @php
+                        $symbol = $ticket->estimated_cost_currency
+                            ? (\App\Models\Ticket::ESTIMATED_COST_CURRENCY_SYMBOLS[$ticket->estimated_cost_currency] ?? '')
+                            : '';
+                    @endphp
+                    <input type="text" value="{{ $ticket->estimated_cost !== null ? ($symbol.number_format((float) $ticket->estimated_cost, 2)) : '-' }}" disabled>
                 </div>
                 <div>
                     <label for="assigned_to">Assigned Technician</label>

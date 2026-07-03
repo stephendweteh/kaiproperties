@@ -67,6 +67,11 @@ class TicketController extends Controller
         }
 
         $validated = $request->validated();
+
+        if (empty($validated['estimated_cost'])) {
+            $validated['estimated_cost_currency'] = null;
+        }
+
         $status = $this->mustGoThroughOperationsApproval($request->user()) ? 'pending_approval' : 'logged';
 
         $ticket = Ticket::create([

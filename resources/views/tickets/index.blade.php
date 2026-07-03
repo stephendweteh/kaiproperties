@@ -98,7 +98,18 @@
                     </td>
                     <td>{{ $ticket->technician?->name ?? 'Unassigned' }}</td>
                     <td>{{ $ticket->etd?->format('Y-m-d H:i') ?? '-' }}</td>
-                    <td>{{ $ticket->estimated_cost !== null ? number_format((float) $ticket->estimated_cost, 2) : '-' }}</td>
+                    <td>
+                        @if($ticket->estimated_cost !== null)
+                            @php
+                                $symbol = $ticket->estimated_cost_currency
+                                    ? (\App\Models\Ticket::ESTIMATED_COST_CURRENCY_SYMBOLS[$ticket->estimated_cost_currency] ?? '')
+                                    : '';
+                            @endphp
+                            {{ $symbol . number_format((float) $ticket->estimated_cost, 2) }}
+                        @else
+                            -
+                        @endif
+                    </td>
                     <td>
                         @php
                             $imageAttachments = $ticket->attachments->where('attachment_type', 'image')->take(3);

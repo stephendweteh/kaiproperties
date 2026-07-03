@@ -94,6 +94,7 @@ class TicketController extends Controller
             'properties' => Property::where('is_active', true)->orderBy('name')->get(),
             'categories' => MaintenanceCategory::where('is_active', true)->orderBy('name')->get(),
             'priorities' => Ticket::PRIORITIES,
+               'estimatedCostCurrencies' => Ticket::ESTIMATED_COST_CURRENCIES,
             'reporters' => $isTenant ? collect() : User::orderBy('name')->get(),
             'technicians' => $isTenant
                 ? collect()
@@ -167,6 +168,10 @@ class TicketController extends Controller
             $validated['assigned_to'] = null;
         }
 
+        if (empty($validated['estimated_cost'])) {
+            $validated['estimated_cost_currency'] = null;
+        }
+
         $status = $this->mustGoThroughOperationsApproval($user) ? 'pending_approval' : 'logged';
 
         $ticket = Ticket::create([
@@ -205,6 +210,7 @@ class TicketController extends Controller
             'properties' => Property::where('is_active', true)->orderBy('name')->get(),
             'categories' => MaintenanceCategory::where('is_active', true)->orderBy('name')->get(),
             'priorities' => Ticket::PRIORITIES,
+               'estimatedCostCurrencies' => Ticket::ESTIMATED_COST_CURRENCIES,
             'statuses' => $technicianMode ? ['in_progress', 'completed'] : Ticket::STATUSES,
             'technicianMode' => $technicianMode,
             'reviewMode' => $reviewMode,
@@ -360,6 +366,7 @@ class TicketController extends Controller
             // to the general ticket update logic below.
             if (!$isOperationsManager) {
                 $validated = $request->validate([
+                           'estimated_cost_currency' => ['nullable', 'in:GBP,USD,EUR,GHS,CNY', 'required_with:estimated_cost'],
                     'status' => ['required', 'in:in_progress,completed'],
                 ]);
 
@@ -466,6 +473,7 @@ class TicketController extends Controller
             'priority' => ['required', 'in:low,medium,high,urgent'],
             'etd' => ['nullable', 'date'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
+            'estimated_cost_currency' => ['nullable', 'in:GBP,USD,EUR,GHS,CNY', 'required_with:estimated_cost'],
             'image_attachments' => ['nullable', 'array', 'max:8'],
             'image_attachments.*' => ['file', 'image', 'max:5120'],
             'camera_attachment' => ['nullable', 'image', 'max:5120'],
@@ -489,6 +497,10 @@ class TicketController extends Controller
 
         if ($validated['status'] === 'closed') {
             $validated['closed_at'] = now();
+        }
+
+        if (empty($validated['estimated_cost'])) {
+            $validated['estimated_cost_currency'] = null;
         }
 
         $ticket->update($validated);

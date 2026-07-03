@@ -4,7 +4,7 @@
 @endphp
 
 <div class="form-grid">
-    <div>
+    <div style="grid-column: 1 / -1;">
         <label for="title">Title</label>
         <input id="title" type="text" name="title" value="{{ old('title', $ticket->title ?? '') }}" required>
     </div>
@@ -99,7 +99,18 @@
 
     <div>
         <label for="estimated_cost">Estimated Cost</label>
-        <input id="estimated_cost" type="number" name="estimated_cost" min="0" step="0.01" value="{{ old('estimated_cost', $ticket->estimated_cost ?? '') }}" placeholder="0.00">
+        <div style="display:flex; align-items:center; gap:0.45rem;">
+            <select id="estimated_cost_currency" name="estimated_cost_currency" style="max-width:110px;">
+                @php
+                    $selectedCurrency = old('estimated_cost_currency', $ticket->estimated_cost_currency ?? 'GHS');
+                    $currencyLabels = \App\Models\Ticket::ESTIMATED_COST_CURRENCY_SYMBOLS;
+                @endphp
+                @foreach(($estimatedCostCurrencies ?? ['GBP', 'USD', 'EUR', 'GHS', 'CNY']) as $currency)
+                    <option value="{{ $currency }}" @selected($selectedCurrency === $currency)>{{ $currencyLabels[$currency] ?? $currency }}</option>
+                @endforeach
+            </select>
+            <input id="estimated_cost" type="number" name="estimated_cost" min="0" step="0.01" value="{{ old('estimated_cost', $ticket->estimated_cost ?? '') }}" placeholder="0.00">
+        </div>
     </div>
 </div>
 

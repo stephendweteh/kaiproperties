@@ -80,7 +80,18 @@
             </div>
             <div>
                 <div class="muted">Estimated Cost</div>
-                <div>{{ $ticket->estimated_cost !== null ? number_format((float) $ticket->estimated_cost, 2) : '-' }}</div>
+                <div>
+                    @if($ticket->estimated_cost !== null)
+                        @php
+                            $symbol = $ticket->estimated_cost_currency
+                                ? (\App\Models\Ticket::ESTIMATED_COST_CURRENCY_SYMBOLS[$ticket->estimated_cost_currency] ?? '')
+                                : '';
+                        @endphp
+                        {{ $symbol . number_format((float) $ticket->estimated_cost, 2) }}
+                    @else
+                        -
+                    @endif
+                </div>
             </div>
         </div>
     </section>

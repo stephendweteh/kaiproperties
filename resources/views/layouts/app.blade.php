@@ -181,6 +181,7 @@
 
             <div class="top-user-bar">
                 <button type="button" class="top-install-btn" data-install-app hidden>Install App</button>
+                <button type="button" class="btn btn-alt" onclick="window.location.reload();" aria-label="Refresh page">Refresh</button>
                 <a class="top-user-chip" href="{{ route('profile.edit') }}" title="View profile">
                     @if(auth()->user()->profile_photo_path)
                         <img src="{{ route('media.show', ['path' => auth()->user()->profile_photo_path]) }}" alt="{{ auth()->user()->name }} profile photo" class="top-user-photo">

@@ -23,6 +23,16 @@ class Ticket extends Model
 
     public const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
+    public const ESTIMATED_COST_CURRENCIES = ['GBP', 'USD', 'EUR', 'GHS', 'CNY'];
+
+    public const ESTIMATED_COST_CURRENCY_SYMBOLS = [
+        'GBP' => 'GBP£',
+        'USD' => 'USD$',
+        'EUR' => 'EUR€',
+        'GHS' => 'GHS₵',
+        'CNY' => 'CNY¥',
+    ];
+
     protected $fillable = [
         'ticket_no',
         'title',
@@ -36,6 +46,7 @@ class Ticket extends Model
         'priority',
         'etd',
         'estimated_cost',
+        'estimated_cost_currency',
         'started_at',
         'completed_at',
         'closed_at',

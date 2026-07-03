@@ -30,6 +30,7 @@ class TicketStoreRequest extends FormRequest
             'priority' => ['nullable', 'in:low,medium,high,urgent'],
             'etd' => ['nullable', 'date'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
+            'estimated_cost_currency' => ['nullable', 'in:GBP,USD,EUR,GHS,CNY', 'required_with:estimated_cost'],
         ];
     }
 }
