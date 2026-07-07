@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Customer;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
@@ -15,9 +16,37 @@ class CustomerController extends Controller
     {
         $auditAction = request()->string('audit_action')->toString();
         $allowedActions = ['created', 'updated', 'deleted'];
+        $customerFilter = request()->string('customer_filter')->toString();
+        $allowedCustomerFilters = ['all', 'active', 'with_properties', 'without_properties'];
 
         if (! in_array($auditAction, $allowedActions, true)) {
             $auditAction = '';
+        }
+
+        if (! in_array($customerFilter, $allowedCustomerFilters, true)) {
+            $customerFilter = 'all';
+        }
+
+        $hasPropertiesCustomerId = Schema::hasColumn('properties', 'customer_id');
+
+        $customerQuery = Customer::query()
+            ->withCount('properties')
+            ->orderBy('name');
+
+        if ($customerFilter === 'active') {
+            $customerQuery->where('is_active', true);
+        }
+
+        if ($hasPropertiesCustomerId && $customerFilter === 'with_properties') {
+            $customerQuery->has('properties');
+        }
+
+        if ($hasPropertiesCustomerId && $customerFilter === 'without_properties') {
+            $customerQuery->doesntHave('properties');
+        }
+
+        if (! $hasPropertiesCustomerId && $customerFilter === 'with_properties') {
+            $customerQuery->whereRaw('1 = 0');
         }
 
         $auditQuery = AuditLog::query()
@@ -29,17 +58,14 @@ class CustomerController extends Controller
         }
 
         return view('admin.customers.index', [
-            'customers' => Customer::query()
-                ->withCount('properties')
-                ->orderBy('name')
-                ->paginate(20)
-                ->withQueryString(),
+            'customers' => $customerQuery->paginate(20)->withQueryString(),
             'recentAudits' => $auditQuery
                 ->latest('created_at')
                 ->latest('id')
                 ->limit(15)
                 ->get(),
             'auditAction' => $auditAction,
+            'customerFilter' => $customerFilter,
         ]);
     }
 

@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\Property;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class PropertyController extends Controller
@@ -19,9 +20,33 @@ class PropertyController extends Controller
     {
         $auditAction = request()->string('audit_action')->toString();
         $allowedActions = ['created', 'updated', 'deleted'];
+        $propertyFilter = request()->string('property_filter')->toString();
+        $allowedPropertyFilters = ['all', 'active', 'assigned', 'unassigned'];
 
         if (! in_array($auditAction, $allowedActions, true)) {
             $auditAction = '';
+        }
+
+        if (! in_array($propertyFilter, $allowedPropertyFilters, true)) {
+            $propertyFilter = 'all';
+        }
+
+        $hasPropertiesCustomerId = Schema::hasColumn('properties', 'customer_id');
+
+        $propertyQuery = Property::query()
+            ->with('customer:id,name')
+            ->orderBy('name');
+
+        if ($propertyFilter === 'active') {
+            $propertyQuery->where('is_active', true);
+        }
+
+        if ($hasPropertiesCustomerId && $propertyFilter === 'assigned') {
+            $propertyQuery->whereNotNull('customer_id');
+        }
+
+        if ($hasPropertiesCustomerId && $propertyFilter === 'unassigned') {
+            $propertyQuery->whereNull('customer_id');
         }
 
         $auditQuery = AuditLog::query()
@@ -33,17 +58,14 @@ class PropertyController extends Controller
         }
 
         return view('admin.properties.index', [
-            'properties' => Property::query()
-                ->with('customer:id,name')
-                ->orderBy('name')
-                ->paginate(20)
-                ->withQueryString(),
+            'properties' => $propertyQuery->paginate(20)->withQueryString(),
             'recentAudits' => $auditQuery
                 ->latest('created_at')
                 ->latest('id')
                 ->limit(15)
                 ->get(),
             'auditAction' => $auditAction,
+            'propertyFilter' => $propertyFilter,
         ]);
     }
 

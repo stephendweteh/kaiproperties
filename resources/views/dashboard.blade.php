@@ -83,6 +83,20 @@
             background: #fbfcfe;
         }
 
+        a.dashboard-split-card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s ease;
+        }
+
+        a.dashboard-split-card:hover {
+            border-color: #1f7ae0;
+            box-shadow: 0 2px 8px rgba(31, 122, 224, 0.12);
+            transform: translateY(-1px);
+            background: #f5f9ff;
+        }
+
         .dashboard-split-value {
             font-size: 1.7rem;
             font-weight: 700;
@@ -155,11 +169,23 @@
 
         .dashboard-pie-legend-item {
             display: grid;
-            grid-template-columns: auto 1fr auto;
+            grid-template-columns: auto 1fr;
             gap: 0.65rem;
             align-items: center;
             padding-bottom: 0.55rem;
             border-bottom: 1px solid #eef2f6;
+        }
+
+        .dashboard-pie-legend-name-row {
+            display: flex;
+            align-items: baseline;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+        }
+
+        .dashboard-pie-legend-value {
+            font-weight: 700;
+            color: #102a43;
         }
 
         .dashboard-pie-swatch {
@@ -236,53 +262,129 @@
         <section class="dashboard-grid-wide">
             <article class="card">
                 <h3 class="dashboard-panel-title">Customer Statistics</h3>
+                @php
+                    $canViewCustomers = auth()->user()->hasRole([
+                        \App\Models\User::ROLE_ADMIN,
+                        \App\Models\User::ROLE_OPERATIONS_MANAGER,
+                    ]);
+                @endphp
                 <div class="dashboard-split">
-                    <div class="dashboard-split-card">
+                    @if($canViewCustomers)
+                        <a href="{{ route('admin.customers.index', ['customer_filter' => 'all']) }}" class="dashboard-split-card">
+                    @else
+                        <div class="dashboard-split-card">
+                    @endif
                         <div class="muted">Total Customers</div>
                         <div class="dashboard-split-value">{{ $customerMetrics['total'] }}</div>
                         <div class="dashboard-mini-note">All registered customers in the system.</div>
-                    </div>
-                    <div class="dashboard-split-card">
+                    @if($canViewCustomers)
+                        </a>
+                    @else
+                        </div>
+                    @endif
+                    @if($canViewCustomers)
+                        <a href="{{ route('admin.customers.index', ['customer_filter' => 'active']) }}" class="dashboard-split-card">
+                    @else
+                        <div class="dashboard-split-card">
+                    @endif
                         <div class="muted">Active Customers</div>
                         <div class="dashboard-split-value">{{ $customerMetrics['active'] }}</div>
                         <div class="dashboard-mini-note">Customers currently marked active.</div>
-                    </div>
-                    <div class="dashboard-split-card">
+                    @if($canViewCustomers)
+                        </a>
+                    @else
+                        </div>
+                    @endif
+                    @if($canViewCustomers)
+                        <a href="{{ route('admin.customers.index', ['customer_filter' => 'with_properties']) }}" class="dashboard-split-card">
+                    @else
+                        <div class="dashboard-split-card">
+                    @endif
                         <div class="muted">With Properties</div>
                         <div class="dashboard-split-value">{{ $customerMetrics['with_properties'] }}</div>
                         <div class="dashboard-mini-note">Customers already linked to at least one property.</div>
-                    </div>
-                    <div class="dashboard-split-card">
+                    @if($canViewCustomers)
+                        </a>
+                    @else
+                        </div>
+                    @endif
+                    @if($canViewCustomers)
+                        <a href="{{ route('admin.customers.index', ['customer_filter' => 'without_properties']) }}" class="dashboard-split-card">
+                    @else
+                        <div class="dashboard-split-card">
+                    @endif
                         <div class="muted">Without Properties</div>
                         <div class="dashboard-split-value">{{ $customerMetrics['without_properties'] }}</div>
                         <div class="dashboard-mini-note">Customers waiting for property assignment.</div>
-                    </div>
+                    @if($canViewCustomers)
+                        </a>
+                    @else
+                        </div>
+                    @endif
                 </div>
             </article>
 
             <article class="card">
                 <h3 class="dashboard-panel-title">Property Statistics</h3>
+                @php
+                    $canViewProperties = auth()->user()->hasRole([
+                        \App\Models\User::ROLE_ADMIN,
+                        \App\Models\User::ROLE_OPERATIONS_MANAGER,
+                    ]);
+                @endphp
                 <div class="dashboard-split">
-                    <div class="dashboard-split-card">
+                    @if($canViewProperties)
+                        <a href="{{ route('admin.properties.index', ['property_filter' => 'all']) }}" class="dashboard-split-card">
+                    @else
+                        <div class="dashboard-split-card">
+                    @endif
                         <div class="muted">Total Properties</div>
                         <div class="dashboard-split-value">{{ $propertyMetrics['total'] }}</div>
                         <div class="dashboard-mini-note">All properties currently tracked.</div>
-                    </div>
-                    <div class="dashboard-split-card">
+                    @if($canViewProperties)
+                        </a>
+                    @else
+                        </div>
+                    @endif
+                    @if($canViewProperties)
+                        <a href="{{ route('admin.properties.index', ['property_filter' => 'active']) }}" class="dashboard-split-card">
+                    @else
+                        <div class="dashboard-split-card">
+                    @endif
                         <div class="muted">Active Properties</div>
                         <div class="dashboard-split-value">{{ $propertyMetrics['active'] }}</div>
                         <div class="dashboard-mini-note">Properties available for ticket activity.</div>
-                    </div>
-                    <div class="dashboard-split-card">
+                    @if($canViewProperties)
+                        </a>
+                    @else
+                        </div>
+                    @endif
+                    @if($canViewProperties)
+                        <a href="{{ route('admin.properties.index', ['property_filter' => 'assigned']) }}" class="dashboard-split-card">
+                    @else
+                        <div class="dashboard-split-card">
+                    @endif
                         <div class="muted">Assigned Properties</div>
                         <div class="dashboard-split-value">{{ $propertyMetrics['assigned'] }}</div>
                         <div class="dashboard-mini-note">Properties linked to a customer.</div>
-                    </div>
-                    <div class="dashboard-split-card">
+                    @if($canViewProperties)
+                        </a>
+                    @else
+                        </div>
+                    @endif
+                    @if($canViewProperties)
+                        <a href="{{ route('admin.properties.index', ['property_filter' => 'unassigned']) }}" class="dashboard-split-card">
+                    @else
+                        <div class="dashboard-split-card">
+                    @endif
                         <div class="muted">Unassigned Properties</div>
                         <div class="dashboard-split-value">{{ $propertyMetrics['unassigned'] }}</div>
                         <div class="dashboard-mini-note">Properties that still need a customer.</div>
-                    </div>
+                    @if($canViewProperties)
+                        </a>
+                    @else
+                        </div>
+                    @endif
                 </div>
             </article>
         </section>
@@ -311,7 +413,9 @@
                     @endphp
                     @forelse($topCustomers as $customer)
                         <div class="dashboard-bar-row">
-                            <div>{{ $customer->name }}</div>
+                            <div>
+                                <a href="{{ route('admin.customers.show', $customer->id) }}">{{ $customer->name }}</a>
+                            </div>
                             <div class="dashboard-bar-track">
                                 <div class="dashboard-bar-fill" style="width: {{ $customer->properties_count > 0 ? max((int) round(($customer->properties_count / $highestCustomerPropertyCount) * 100), 8) : 0 }}%; background: linear-gradient(90deg, #16a34a 0%, #6dd3a0 100%);"></div>
                             </div>
@@ -415,10 +519,12 @@
                         <div class="dashboard-pie-legend-item">
                             <span class="dashboard-pie-swatch" style="background: {{ $segment['color'] }};"></span>
                             <div>
-                                <div>{{ $segment['name'] }}</div>
+                                <div class="dashboard-pie-legend-name-row">
+                                    <div>{{ $segment['name'] }}</div>
+                                    <span class="dashboard-pie-legend-value">{{ $segment['value'] }}</span>
+                                </div>
                                 <div class="dashboard-mini-note">{{ $segment['percentage'] }}% of customer tickets</div>
                             </div>
-                            <div>{{ $segment['value'] }}</div>
                         </div>
                     @empty
                         <p class="muted" style="margin:0;">No ticket activity recorded for customers yet.</p>

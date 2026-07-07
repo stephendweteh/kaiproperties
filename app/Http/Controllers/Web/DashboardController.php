@@ -117,7 +117,7 @@ class DashboardController extends Controller
         try {
             $topCustomers = ($hasCustomersTable && $hasPropertiesCustomerId)
                 ? Customer::query()
-                    ->select('customers.name', DB::raw('COUNT(properties.id) as properties_count'))
+                    ->select('customers.id', 'customers.name', DB::raw('COUNT(properties.id) as properties_count'))
                     ->leftJoin('properties', 'properties.customer_id', '=', 'customers.id')
                     ->groupBy('customers.id', 'customers.name')
                     ->orderByDesc('properties_count')
