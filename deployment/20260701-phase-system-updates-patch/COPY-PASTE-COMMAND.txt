@@ -1,5 +1,0 @@
-#!/bin/bash
-# COPY THIS ENTIRE LINE AND PASTE INTO YOUR CPANEL TERMINAL
-# Replace /path/to/kai with your actual project path
-
-cd /path/to/kai-maintenance-system && git fetch origin && git pull origin main && php artisan cache:clear && php artisan config:cache && echo "✓ Successfully updated! Hard refresh browser (Ctrl+Shift+R)"

@@ -363,14 +363,14 @@
     </section>
 
     <section class="card" style="margin-top: 1rem;">
-        <h3>Property Statistics</h3>
+        <h3>Customer Statistics</h3>
         @php
             $propertyChartPalette = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2', '#ea580c', '#4f46e5'];
-            $propertyTicketTotal = max((int) $propertyStats->sum('tickets_count'), 0);
+            $propertyTicketTotal = max((int) $customerStats->sum('tickets_count'), 0);
             $pieSegments = [];
             $offset = 0;
 
-            foreach ($propertyStats as $index => $entry) {
+            foreach ($customerStats as $index => $entry) {
                 $value = (int) $entry->tickets_count;
 
                 if ($value <= 0 || $propertyTicketTotal === 0) {
@@ -397,8 +397,8 @@
                 : '#e7edf3';
         @endphp
 
-        @if($propertyStats->isEmpty())
-            <p class="muted" style="margin:0;">No properties found.</p>
+        @if($customerStats->isEmpty())
+            <p class="muted" style="margin:0;">No customers found.</p>
         @else
             <div class="dashboard-pie-layout">
                 <div class="dashboard-pie-wrap">
@@ -416,12 +416,12 @@
                             <span class="dashboard-pie-swatch" style="background: {{ $segment['color'] }};"></span>
                             <div>
                                 <div>{{ $segment['name'] }}</div>
-                                <div class="dashboard-mini-note">{{ $segment['percentage'] }}% of property tickets</div>
+                                <div class="dashboard-mini-note">{{ $segment['percentage'] }}% of customer tickets</div>
                             </div>
                             <div>{{ $segment['value'] }}</div>
                         </div>
                     @empty
-                        <p class="muted" style="margin:0;">No ticket activity recorded for properties yet.</p>
+                        <p class="muted" style="margin:0;">No ticket activity recorded for customers yet.</p>
                     @endforelse
                 </div>
             </div>

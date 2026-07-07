@@ -1,1 +1,0 @@
-cd /home/tackjdgn/kai.tacklehubs.tech && php deployment/20260701-full-recovery-patch/recovery.php && echo "" && echo "✓ Recovery complete! Hard refresh browser: Ctrl+Shift+R"

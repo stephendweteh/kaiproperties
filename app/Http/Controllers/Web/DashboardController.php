@@ -99,13 +99,20 @@ class DashboardController extends Controller
             ->orderByDesc('tickets_count')
             ->get();
 
-        $propertyStats = Property::query()
-            ->select('properties.name', DB::raw('COUNT(tickets.id) as tickets_count'))
-            ->leftJoin('tickets', 'tickets.property_id', '=', 'properties.id')
-            ->groupBy('properties.id', 'properties.name')
-            ->orderByDesc('tickets_count')
-            ->orderBy('properties.name')
-            ->get();
+        try {
+            $customerStats = ($hasCustomersTable && $hasPropertiesCustomerId)
+                ? Customer::query()
+                    ->select('customers.name', DB::raw('COUNT(tickets.id) as tickets_count'))
+                    ->leftJoin('properties', 'properties.customer_id', '=', 'customers.id')
+                    ->leftJoin('tickets', 'tickets.property_id', '=', 'properties.id')
+                    ->groupBy('customers.id', 'customers.name')
+                    ->orderByDesc('tickets_count')
+                    ->orderBy('customers.name')
+                    ->get()
+                : collect();
+        } catch (QueryException) {
+            $customerStats = collect();
+        }
 
         try {
             $topCustomers = ($hasCustomersTable && $hasPropertiesCustomerId)
@@ -128,7 +135,7 @@ class DashboardController extends Controller
             'propertyMetrics' => $propertyMetrics,
             'ticketStatusBreakdown' => $ticketStatusBreakdown,
             'workload' => $workload,
-            'propertyStats' => $propertyStats,
+            'customerStats' => $customerStats,
             'topCustomers' => $topCustomers,
         ]);
     }
