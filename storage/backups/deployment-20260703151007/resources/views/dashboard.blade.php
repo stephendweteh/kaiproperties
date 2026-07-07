@@ -24,17 +24,6 @@
             padding: 1rem;
             background: linear-gradient(180deg, #ffffff 0%, #f5f8fb 100%);
             border: 1px solid #e1e7ee;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            color: inherit;
-            display: block;
-        }
-
-        a.dashboard-stat-card:hover {
-            background: linear-gradient(180deg, #f0f5fb 0%, #e8f0f8 100%);
-            border-color: #1f7ae0;
-            box-shadow: 0 2px 8px rgba(31, 122, 224, 0.12);
-            transform: translateY(-2px);
         }
 
         .dashboard-stat-card .metric {
@@ -180,57 +169,30 @@
 
     <div class="dashboard-stack">
         <section class="dashboard-stat-grid">
-            @if (auth()->user()->role !== \App\Models\User::ROLE_TECHNICIAN)
-                <a href="{{ route('tickets.index') }}" class="dashboard-stat-card">
-                    <div class="muted">Total Tickets</div>
-                    <div class="metric">{{ $metrics['total'] }}</div>
-                </a>
-                <a href="{{ route('tickets.index', ['status' => 'logged']) }}" class="dashboard-stat-card">
-                    <div class="muted">New</div>
-                    <div class="metric">{{ $metrics['new'] }}</div>
-                </a>
-                <a href="{{ route('tickets.index', ['status' => 'in_progress']) }}" class="dashboard-stat-card">
-                    <div class="muted">In Progress</div>
-                    <div class="metric">{{ $metrics['in_progress'] }}</div>
-                </a>
-                <a href="{{ route('tickets.index', ['status' => 'overdue']) }}" class="dashboard-stat-card">
-                    <div class="muted">Overdue</div>
-                    <div class="metric">{{ $metrics['overdue'] }}</div>
-                </a>
-                <a href="{{ route('tickets.index', ['status' => 'completed']) }}" class="dashboard-stat-card">
-                    <div class="muted">Completed</div>
-                    <div class="metric">{{ $metrics['completed'] }}</div>
-                </a>
-                <a href="{{ route('tickets.index', ['status' => 'closed']) }}" class="dashboard-stat-card">
-                    <div class="muted">Closed</div>
-                    <div class="metric">{{ $metrics['closed'] }}</div>
-                </a>
-            @else
-                <article class="dashboard-stat-card">
-                    <div class="muted">Total Tickets</div>
-                    <div class="metric">{{ $metrics['total'] }}</div>
-                </article>
-                <article class="dashboard-stat-card">
-                    <div class="muted">New</div>
-                    <div class="metric">{{ $metrics['new'] }}</div>
-                </article>
-                <article class="dashboard-stat-card">
-                    <div class="muted">In Progress</div>
-                    <div class="metric">{{ $metrics['in_progress'] }}</div>
-                </article>
-                <article class="dashboard-stat-card">
-                    <div class="muted">Overdue</div>
-                    <div class="metric">{{ $metrics['overdue'] }}</div>
-                </article>
-                <article class="dashboard-stat-card">
-                    <div class="muted">Completed</div>
-                    <div class="metric">{{ $metrics['completed'] }}</div>
-                </article>
-                <article class="dashboard-stat-card">
-                    <div class="muted">Closed</div>
-                    <div class="metric">{{ $metrics['closed'] }}</div>
-                </article>
-            @endif
+            <article class="dashboard-stat-card">
+                <div class="muted">Total Tickets</div>
+                <div class="metric">{{ $metrics['total'] }}</div>
+            </article>
+            <article class="dashboard-stat-card">
+                <div class="muted">New</div>
+                <div class="metric">{{ $metrics['new'] }}</div>
+            </article>
+            <article class="dashboard-stat-card">
+                <div class="muted">In Progress</div>
+                <div class="metric">{{ $metrics['in_progress'] }}</div>
+            </article>
+            <article class="dashboard-stat-card">
+                <div class="muted">Overdue</div>
+                <div class="metric">{{ $metrics['overdue'] }}</div>
+            </article>
+            <article class="dashboard-stat-card">
+                <div class="muted">Completed</div>
+                <div class="metric">{{ $metrics['completed'] }}</div>
+            </article>
+            <article class="dashboard-stat-card">
+                <div class="muted">Closed</div>
+                <div class="metric">{{ $metrics['closed'] }}</div>
+            </article>
         </section>
 
         <section class="dashboard-grid-wide">
