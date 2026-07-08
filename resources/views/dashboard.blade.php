@@ -266,6 +266,8 @@
                     $canViewCustomers = auth()->user()->hasRole([
                         \App\Models\User::ROLE_ADMIN,
                         \App\Models\User::ROLE_OPERATIONS_MANAGER,
+                        \App\Models\User::ROLE_MANAGING_DIRECTOR,
+                        \App\Models\User::ROLE_GENERAL_MANAGER,
                     ]);
                 @endphp
                 <div class="dashboard-split">
@@ -330,6 +332,8 @@
                     $canViewProperties = auth()->user()->hasRole([
                         \App\Models\User::ROLE_ADMIN,
                         \App\Models\User::ROLE_OPERATIONS_MANAGER,
+                        \App\Models\User::ROLE_MANAGING_DIRECTOR,
+                        \App\Models\User::ROLE_GENERAL_MANAGER,
                     ]);
                 @endphp
                 <div class="dashboard-split">
@@ -448,6 +452,7 @@
                 <tr>
                     <th>Technician</th>
                     <th>Assigned Tickets</th>
+                    <th>Completed Tickets</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -455,10 +460,11 @@
                     <tr>
                         <td>{{ $entry->name }}</td>
                         <td>{{ $entry->tickets_count }}</td>
+                        <td>{{ $entry->completed_tickets_count }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="2">No assignments yet.</td>
+                        <td colspan="3">No assignments yet.</td>
                     </tr>
                 @endforelse
                 </tbody>

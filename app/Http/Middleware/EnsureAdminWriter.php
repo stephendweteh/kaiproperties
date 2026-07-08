@@ -7,7 +7,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class EnsureAdmin
+class EnsureAdminWriter
 {
     /**
      * Handle an incoming request.
@@ -18,19 +18,14 @@ class EnsureAdmin
     {
         $user = $request->user();
 
-        if (! $user || ! $user->hasRole([
-            User::ROLE_ADMIN,
-            User::ROLE_OPERATIONS_MANAGER,
-            User::ROLE_MANAGING_DIRECTOR,
-            User::ROLE_GENERAL_MANAGER,
-        ])) {
+        if (! $user || ! $user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER])) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Admin access required.',
+                    'message' => 'You do not have permission to perform this action.',
                 ], 403);
             }
 
-            abort(403, 'Admin access required.');
+            abort(403, 'You do not have permission to perform this action.');
         }
 
         return $next($request);

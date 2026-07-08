@@ -60,11 +60,20 @@ Route::middleware('auth')->group(function (): void {
 	Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
 	Route::prefix('admin')->name('admin.')->middleware('admin')->group(function (): void {
-		Route::resource('customers', AdminCustomerController::class);
-		Route::resource('properties', AdminPropertyController::class)->except(['show']);
-		Route::resource('categories', AdminCategoryController::class)->except(['show']);
-		Route::resource('users', AdminUserController::class)->except(['show']);
-		Route::post('users/{user}/approve', [AdminUserController::class, 'approve'])->name('users.approve');
+		// Read-only routes — accessible to all admin roles including Managing Director & General Manager
+		Route::resource('customers', AdminCustomerController::class)->only(['index', 'show']);
+		Route::resource('properties', AdminPropertyController::class)->only(['index']);
+		Route::resource('categories', AdminCategoryController::class)->only(['index']);
+		Route::resource('users', AdminUserController::class)->only(['index']);
+
+		// Write routes — restricted to Admin and Operations Manager only
+		Route::middleware('admin_writer')->group(function (): void {
+			Route::resource('customers', AdminCustomerController::class)->except(['index', 'show']);
+			Route::resource('properties', AdminPropertyController::class)->except(['index', 'show']);
+			Route::resource('categories', AdminCategoryController::class)->except(['index', 'show']);
+			Route::resource('users', AdminUserController::class)->except(['index', 'show']);
+			Route::post('users/{user}/approve', [AdminUserController::class, 'approve'])->name('users.approve');
+		});
 
 		Route::middleware('super_admin')->group(function (): void {
 			Route::get('settings', [AdminSettingsController::class, 'edit'])->name('settings.edit');
