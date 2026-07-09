@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\MaintenanceCategory;
 use App\Models\Property;
 use App\Models\Ticket;
@@ -91,6 +92,7 @@ class TicketController extends Controller
 
         return view('tickets.create', [
             'isTenant' => $isTenant,
+            'customers' => Customer::with('properties')->where('is_active', true)->orderBy('name')->get(),
             'properties' => Property::where('is_active', true)->orderBy('name')->get(),
             'categories' => MaintenanceCategory::where('is_active', true)->orderBy('name')->get(),
             'priorities' => Ticket::PRIORITIES,

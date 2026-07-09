@@ -9,12 +9,24 @@
         <input id="title" type="text" name="title" value="{{ old('title', $ticket->title ?? '') }}" required>
     </div>
 
+    @if(!$editMode && isset($customers))
+    <div>
+        <label for="customer_id">Customer</label>
+        <select id="customer_id" name="customer_id">
+            <option value="">All Customers</option>
+            @foreach($customers as $customer)
+                <option value="{{ $customer->id }}" data-properties="{{ implode(',', $customer->properties->pluck('id')->toArray()) }}" @selected((string) old('customer_id') === (string) $customer->id)>{{ $customer->name }}</option>
+            @endforeach
+        </select>
+    </div>
+    @endif
+
     <div>
         <label for="property_id">Property</label>
         <select id="property_id" name="property_id" required>
             <option value="">Select Property</option>
             @foreach($properties as $property)
-                <option value="{{ $property->id }}" @selected((string) old('property_id', $ticket->property_id ?? '') === (string) $property->id)>{{ $property->name }}</option>
+                <option value="{{ $property->id }}" data-customer-id="{{ $property->customer_id ?? '' }}" @selected((string) old('property_id', $ticket->property_id ?? '') === (string) $property->id)>{{ $property->name }}</option>
             @endforeach
         </select>
     </div>
