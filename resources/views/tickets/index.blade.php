@@ -107,6 +107,7 @@
                 <th>Ticket No</th>
                 <th>Title</th>
                 <th>Property</th>
+                <th>Customer</th>
                 <th>Category</th>
                 <th>Status</th>
                 <th>Technician</th>
@@ -122,6 +123,7 @@
                     <td>{{ $ticket->ticket_no }}</td>
                     <td>{{ $ticket->title }}</td>
                     <td>{{ $ticket->property->name }}</td>
+                    <td>{{ $ticket->property->customer?->name ?? '-' }}</td>
                     <td>{{ $ticket->category->name }}</td>
                     <td>
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem;">

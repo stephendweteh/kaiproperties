@@ -34,7 +34,7 @@ class TicketController extends Controller
 
         $tickets = Ticket::query()
             ->with([
-                'property',
+                'property.customer',
                 'category',
                 'reporter:id,name',
                 'technician:id,name',
