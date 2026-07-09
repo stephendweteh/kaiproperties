@@ -93,9 +93,13 @@ class DashboardController extends Controller
         });
 
         $workload = Ticket::query()
-            ->select('users.name', DB::raw('COUNT(tickets.id) as tickets_count'))
+            ->select(
+                'users.name',
+                DB::raw('COUNT(tickets.id) as tickets_count'),
+                DB::raw("SUM(CASE WHEN tickets.status = 'completed' THEN 1 ELSE 0 END) as completed_tickets_count")
+            )
             ->join('users', 'users.id', '=', 'tickets.assigned_to')
-            ->groupBy('users.name')
+            ->groupBy('users.id', 'users.name')
             ->orderByDesc('tickets_count')
             ->get();
 

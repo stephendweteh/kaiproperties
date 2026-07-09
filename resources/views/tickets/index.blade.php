@@ -21,10 +21,17 @@
                 @endforeach
             </select>
 
-            <select name="property_id">
+            <select name="customer_id" id="customer_id">
+                <option value="">All Customers</option>
+                @foreach($customers as $customer)
+                    <option value="{{ $customer->id }}" data-properties="{{ implode(',', $customer->properties->pluck('id')->toArray()) }}" @selected((string) request('customer_id') === (string) $customer->id)>{{ $customer->name }}</option>
+                @endforeach
+            </select>
+
+            <select name="property_id" id="property_id">
                 <option value="">All Properties</option>
                 @foreach($properties as $property)
-                    <option value="{{ $property->id }}" @selected((string) request('property_id') === (string) $property->id)>{{ $property->name }}</option>
+                    <option value="{{ $property->id }}" data-customer-id="{{ $property->customer_id ?? '' }}" @selected((string) request('property_id') === (string) $property->id)>{{ $property->name }}</option>
                 @endforeach
             </select>
 
@@ -47,6 +54,34 @@
 
         <button type="submit">Apply Filters</button>
     </form>
+
+    <script>
+        const customerSelect = document.getElementById('customer_id');
+        const propertySelect = document.getElementById('property_id');
+
+        if (customerSelect && propertySelect) {
+            const allPropertyOptions = Array.from(propertySelect.options).slice(1);
+
+            customerSelect.addEventListener('change', function() {
+                const selectedCustomerId = this.value;
+                const customerOption = Array.from(customerSelect.options).find(opt => opt.value === selectedCustomerId);
+                const propertyIds = customerOption ? (customerOption.dataset.properties || '').split(',').filter(id => id) : [];
+
+                propertySelect.innerHTML = '<option value="">All Properties</option>';
+
+                allPropertyOptions.forEach(option => {
+                    if (!selectedCustomerId || propertyIds.includes(option.value)) {
+                        propertySelect.appendChild(option.cloneNode(true));
+                    }
+                });
+            });
+
+            const selectedCustomerId = customerSelect.value;
+            if (selectedCustomerId) {
+                customerSelect.dispatchEvent(new Event('change'));
+            }
+        }
+    </script>
 
     @if($canCreateTickets)
         <div style="display: flex; justify-content: flex-end; margin-bottom: 0.7rem;">

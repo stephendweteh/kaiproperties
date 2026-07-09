@@ -48,6 +48,9 @@ class TicketController extends Controller
                 ->where('assigned_to', $request->user()->id)
                 ->whereIn('status', $this->technicianVisibleStatuses()))
             ->when($request->filled('status'), fn (Builder $builder) => $builder->where('status', $request->string('status')))
+            ->when($request->filled('customer_id'), function (Builder $builder) use ($request): void {
+                $builder->whereHas('property', fn (Builder $inner) => $inner->where('customer_id', $request->integer('customer_id')));
+            })
             ->when($request->filled('property_id'), fn (Builder $builder) => $builder->where('property_id', $request->integer('property_id')))
             ->when($request->filled('maintenance_category_id'), fn (Builder $builder) => $builder->where('maintenance_category_id', $request->integer('maintenance_category_id')))
             ->when($request->filled('assigned_to'), fn (Builder $builder) => $builder->where('assigned_to', $request->integer('assigned_to')))
@@ -68,6 +71,7 @@ class TicketController extends Controller
         return view('tickets.index', [
             'tickets' => $tickets,
             'statuses' => Ticket::STATUSES,
+            'customers' => Customer::with('properties')->where('is_active', true)->orderBy('name')->get(),
             'properties' => Property::orderBy('name')->get(),
             'categories' => MaintenanceCategory::orderBy('name')->get(),
             'isTechnician' => $isTechnician,
