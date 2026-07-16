@@ -1,0 +1,61 @@
+================================================================================
+CPANEL PATCH CREATED - July 9, 2026
+================================================================================
+
+Patch Directory: deployment/20260709-md-gm-customers-cpanel-patch/
+Zip Archive: deployment/20260709-md-gm-customers-cpanel-patch.zip
+
+FEATURES INCLUDED:
+==================
+✓ Managing Director & General Manager view-only access to admin pages
+✓ New EnsureAdminWriter middleware for write restrictions
+✓ Customer selector in ticket creation with property filtering
+✓ Customer filter in maintenance tickets list
+✓ Customer column in tickets table
+
+QUICK APPLY (One Command):
+===========================
+bash deployment/20260709-md-gm-customers-cpanel-patch/apply.sh
+
+PATCH CONTENTS:
+================
+- PATCH.md: Comprehensive documentation with installation options
+- COPY-PASTE.txt: Quick reference for terminal users
+- apply.sh: Executable script for one-command deployment
+- md-gm-customers.patch: Git-style unified diff
+- files/: All modified source files in directory structure
+
+FILES MODIFIED:
+================
+1. app/Http/Middleware/EnsureAdmin.php (updated)
+2. app/Http/Middleware/EnsureAdminWriter.php (NEW)
+3. app/Http/Controllers/Web/TicketController.php (updated)
+4. bootstrap/app.php (updated)
+5. resources/views/dashboard.blade.php (updated)
+6. resources/views/layouts/app.blade.php (updated)
+7. resources/views/tickets/create.blade.php (updated)
+8. resources/views/tickets/index.blade.php (updated)
+9. resources/views/tickets/partials/form-fields.blade.php (updated)
+10. routes/web.php (updated)
+
+MANUAL INSTALLATION:
+====================
+If apply.sh doesn't work, manually upload all files from files/ to their
+corresponding locations, then run:
+  php artisan optimize:clear
+  php artisan route:clear
+
+VERIFICATION STEPS:
+====================
+1. Test MD/GM access to admin pages (should see clickable stat cards)
+2. Test customer selector in ticket creation
+3. Test customer filter in tickets list
+4. Verify write operations are restricted for MD/GM
+5. Check sidebar nav is hidden for MD/GM
+
+GIT INFO:
+==========
+Patch covers commits: 4eaad9a through 14b9914
+Changes available in: deployment/20260709-md-gm-customers-cpanel-patch/
+
+NOTE: deployment/ is in .gitignore by design (patches not tracked in repo)
