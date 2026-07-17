@@ -71,6 +71,14 @@
                 <div>{{ $ticket->reporter?->name ?? '-' }}</div>
             </div>
             <div>
+                <div class="muted">Created At</div>
+                <div>{{ $ticket->created_at?->format('Y-m-d H:i') ?? '-' }}</div>
+            </div>
+            <div>
+                <div class="muted">Completed At</div>
+                <div>{{ $ticket->completed_at?->format('Y-m-d H:i') ?? '-' }}</div>
+            </div>
+            <div>
                 <div class="muted">Assigned Technician</div>
                 <div>{{ $ticket->technician?->name ?? 'Unassigned' }}</div>
             </div>

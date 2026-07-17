@@ -105,11 +105,13 @@
             <thead>
             <tr>
                 <th>Ticket No</th>
+                <th>Created</th>
                 <th>Title</th>
                 <th>Property</th>
                 <th>Customer</th>
                 <th>Category</th>
                 <th>Status</th>
+                <th>Completed</th>
                 <th>Technician</th>
                 <th>ETD</th>
                 <th>Estimated Cost</th>
@@ -121,6 +123,7 @@
             @forelse($tickets as $ticket)
                 <tr>
                     <td>{{ $ticket->ticket_no }}</td>
+                    <td>{{ $ticket->created_at?->format('Y-m-d H:i') ?? '-' }}</td>
                     <td>{{ $ticket->title }}</td>
                     <td>{{ $ticket->property->name }}</td>
                     <td>{{ $ticket->property->customer?->name ?? '-' }}</td>
@@ -133,6 +136,7 @@
                             </a>
                         </div>
                     </td>
+                    <td>{{ $ticket->completed_at?->format('Y-m-d H:i') ?? '-' }}</td>
                     <td>{{ $ticket->technician?->name ?? 'Unassigned' }}</td>
                     <td>{{ $ticket->etd?->format('Y-m-d H:i') ?? '-' }}</td>
                     <td>
@@ -226,7 +230,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10">No tickets found.</td>
+                    <td colspan="11">No tickets found.</td>
                 </tr>
             @endforelse
             </tbody>
