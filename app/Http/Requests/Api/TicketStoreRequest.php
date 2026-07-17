@@ -27,6 +27,8 @@ class TicketStoreRequest extends FormRequest
             'property_id' => ['required', 'exists:properties,id'],
             'maintenance_category_id' => ['required', 'exists:maintenance_categories,id'],
             'unit' => ['nullable', 'string', 'max:100'],
+            'reported_by' => ['nullable', 'exists:users,id'],
+            'assigned_to' => ['nullable', 'exists:users,id'],
             'priority' => ['nullable', 'in:low,medium,high,urgent'],
             'etd' => ['nullable', 'date'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],

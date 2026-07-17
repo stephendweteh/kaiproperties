@@ -79,6 +79,7 @@ Route::prefix('mobile/v1')->name('mobile.v1.')->group(function (): void {
         Route::get('/references/properties', [ReferenceController::class, 'properties'])->name('references.properties');
         Route::get('/references/categories', [ReferenceController::class, 'categories'])->name('references.categories');
         Route::get('/references/technicians', [ReferenceController::class, 'technicians'])->name('references.technicians');
+        Route::get('/references/reporters', [ReferenceController::class, 'reporters'])->name('references.reporters');
 
         // Tickets
         Route::get('/tickets', [MobileTicketController::class, 'index'])->name('tickets.index');

@@ -41,4 +41,15 @@ class ReferenceController extends Controller
             ),
         ]);
     }
+
+    public function reporters()
+    {
+        return response()->json([
+            'data' => UserResource::collection(
+                User::query()
+                    ->orderBy('name')
+                    ->get()
+            ),
+        ]);
+    }
 }

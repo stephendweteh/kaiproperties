@@ -73,12 +73,34 @@ class TicketController extends Controller
     public function store(TicketStoreRequest $request)
     {
         $user = $request->user();
+        $isReporterScopedRole = $this->isReporterScopedRole($user);
 
         if (! $this->canCreateTickets($user)) {
             return response()->json(['message' => 'You do not have permission to log tickets.'], 403);
         }
 
         $validated = $request->validated();
+
+        $reportedBy = $validated['reported_by'] ?? null;
+        if ($isReporterScopedRole) {
+            $reportedBy = $user->id;
+        }
+
+        if (! $reportedBy) {
+            return response()->json(['message' => 'Please select a reporter.'], 422);
+        }
+
+        $assignedTo = $validated['assigned_to'] ?? null;
+        if ($assignedTo) {
+            $technician = User::query()
+                ->whereKey($assignedTo)
+                ->where('role', User::ROLE_TECHNICIAN)
+                ->first();
+
+            if (! $technician) {
+                return response()->json(['message' => 'Selected user is not a technician.'], 422);
+            }
+        }
 
         if (empty($validated['estimated_cost'])) {
             $validated['estimated_cost_currency'] = null;
@@ -88,7 +110,8 @@ class TicketController extends Controller
 
         $ticket = Ticket::create([
             ...$validated,
-            'reported_by' => $user->id,
+            'reported_by' => $reportedBy,
+            'assigned_to' => $assignedTo,
             'status'      => $status,
             'priority'    => $validated['priority'] ?? 'medium',
         ]);
