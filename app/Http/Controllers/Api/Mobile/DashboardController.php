@@ -12,15 +12,16 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $user            = $request->user();
+        $user = $request->user();
         $isTechnicianRole = $user->hasRole(User::ROLE_TECHNICIAN);
-        $isTenantRole     = $user->hasRole(User::ROLE_TENANT);
+        $isReporterScopedRole = $this->isReporterScopedRole($user);
 
         $baseQuery = Ticket::query();
 
         if ($isTechnicianRole) {
-            $baseQuery->where('assigned_to', $user->id);
-        } elseif ($isTenantRole) {
+            $baseQuery->where('assigned_to', $user->id)
+                ->whereIn('status', $this->technicianVisibleStatuses());
+        } elseif ($isReporterScopedRole && ! $this->hasFullTicketVisibility($user)) {
             $baseQuery->where('reported_by', $user->id);
         }
 
@@ -39,8 +40,10 @@ class DashboardController extends Controller
 
         $recentTickets = Ticket::query()
             ->with(['property:id,name', 'category:id,name'])
-            ->when($isTechnicianRole, fn ($q) => $q->where('assigned_to', $user->id))
-            ->when($isTenantRole, fn ($q) => $q->where('reported_by', $user->id))
+            ->when($isTechnicianRole, fn ($q) => $q
+                ->where('assigned_to', $user->id)
+                ->whereIn('status', $this->technicianVisibleStatuses()))
+            ->when($isReporterScopedRole && ! $this->hasFullTicketVisibility($user), fn ($q) => $q->where('reported_by', $user->id))
             ->latest()
             ->limit(5)
             ->get()
@@ -56,8 +59,10 @@ class DashboardController extends Controller
             ]);
 
         $byStatus = Ticket::query()
-            ->when($isTechnicianRole, fn ($q) => $q->where('assigned_to', $user->id))
-            ->when($isTenantRole, fn ($q) => $q->where('reported_by', $user->id))
+            ->when($isTechnicianRole, fn ($q) => $q
+                ->where('assigned_to', $user->id)
+                ->whereIn('status', $this->technicianVisibleStatuses()))
+            ->when($isReporterScopedRole && ! $this->hasFullTicketVisibility($user), fn ($q) => $q->where('reported_by', $user->id))
             ->select('status', DB::raw('COUNT(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status');
@@ -66,6 +71,30 @@ class DashboardController extends Controller
             'metrics'        => $metrics,
             'by_status'      => $byStatus,
             'recent_tickets' => $recentTickets,
+        ]);
+    }
+
+    private function technicianVisibleStatuses(): array
+    {
+        return ['assigned', 'in_progress', 'on_hold', 'completed', 'closed', 'overdue'];
+    }
+
+    private function isReporterScopedRole(User $user): bool
+    {
+        return $user->hasRole([
+            User::ROLE_TENANT,
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
+    }
+
+    private function hasFullTicketVisibility(User $user): bool
+    {
+        return $user->hasRole([
+            User::ROLE_ADMIN,
+            User::ROLE_OPERATIONS_MANAGER,
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
         ]);
     }
 }

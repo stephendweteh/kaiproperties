@@ -149,6 +149,7 @@ body {
     align-items: center;
     gap: 0.55rem;
     margin-bottom: 0.8rem;
+    position: relative;
 }
 
 .top-install-btn {
@@ -208,6 +209,136 @@ body {
     font-size: 0.88rem;
     font-weight: 600;
     color: var(--ink);
+}
+
+.top-notification-wrap {
+    position: relative;
+}
+
+.top-notification-btn {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--accent);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 14px rgba(12, 31, 63, 0.08);
+}
+
+.top-notification-btn:hover {
+    background: #f0f6ff;
+    opacity: 1;
+}
+
+.top-notification-icon {
+    width: 18px;
+    height: 18px;
+}
+
+.top-notification-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    padding: 0 4px;
+    border: 1px solid #fff;
+}
+
+.top-notification-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: min(360px, 92vw);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 14px 34px rgba(12, 31, 63, 0.18);
+    z-index: 80;
+    overflow: hidden;
+}
+
+.top-notification-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid var(--border);
+    background: #f8fbff;
+}
+
+.top-notification-panel-head h3 {
+    margin: 0;
+    font-size: 0.92rem;
+}
+
+.top-notification-panel-head a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.top-notification-empty {
+    margin: 0;
+    padding: 0.9rem;
+    color: var(--muted);
+    font-size: 0.86rem;
+}
+
+.top-notification-list {
+    max-height: min(60vh, 370px);
+    overflow: auto;
+}
+
+.top-notification-item {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid #eef3fa;
+}
+
+.top-notification-item:hover {
+    background: #f8fbff;
+}
+
+.top-notification-item.is-unread {
+    background: #eef6ff;
+}
+
+.top-notification-item-title {
+    display: block;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #163e6f;
+}
+
+.top-notification-item-desc {
+    display: block;
+    margin-top: 0.12rem;
+    font-size: 0.82rem;
+    color: var(--ink);
+}
+
+.top-notification-item-meta {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.72rem;
+    color: var(--muted);
 }
 
 /* Mobile app header */

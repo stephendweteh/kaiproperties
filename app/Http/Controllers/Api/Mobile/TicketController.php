@@ -37,26 +37,32 @@ class TicketController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        $isReporterScopedRole = $this->isReporterScopedRole($user);
 
         $query = Ticket::query()
             ->with(['property:id,name,code', 'category:id,name', 'reporter:id,name', 'technician:id,name'])
             ->when($request->filled('status'), fn (Builder $b) => $b->where('status', $request->string('status')))
             ->when($request->filled('priority'), fn (Builder $b) => $b->where('priority', $request->string('priority')))
             ->when($request->filled('property_id'), fn (Builder $b) => $b->where('property_id', $request->integer('property_id')))
+            ->when($request->filled('maintenance_category_id'), fn (Builder $b) => $b->where('maintenance_category_id', $request->integer('maintenance_category_id')))
+            ->when($request->filled('assigned_to'), fn (Builder $b) => $b->where('assigned_to', $request->integer('assigned_to')))
             ->when($request->filled('search'), function (Builder $b) use ($request): void {
                 $search = $request->string('search');
                 $b->where(fn (Builder $inner) => $inner
                     ->where('ticket_no', 'like', "%{$search}%")
                     ->orWhere('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
                 );
             })
             ->latest();
 
+        if ($isReporterScopedRole && ! $this->hasFullTicketVisibility($user)) {
+            $query->where('reported_by', $user->id);
+        }
+
         if ($user->hasRole(User::ROLE_TECHNICIAN)) {
             $query->where('assigned_to', $user->id)
-                ->whereIn('status', ['assigned', 'in_progress', 'pending_approval', 'on_hold', 'completed']);
-        } elseif ($user->hasRole(User::ROLE_TENANT)) {
-            $query->where('reported_by', $user->id);
+                ->whereIn('status', $this->technicianVisibleStatuses());
         }
 
         $tickets = $query->paginate($request->integer('per_page', 15));
@@ -68,8 +74,8 @@ class TicketController extends Controller
     {
         $user = $request->user();
 
-        if ($user->hasRole(User::ROLE_TECHNICIAN)) {
-            return response()->json(['message' => 'Technicians cannot log new tickets.'], 403);
+        if (! $this->canCreateTickets($user)) {
+            return response()->json(['message' => 'You do not have permission to log tickets.'], 403);
         }
 
         $validated = $request->validated();
@@ -78,7 +84,7 @@ class TicketController extends Controller
             $validated['estimated_cost_currency'] = null;
         }
 
-        $status = $user->hasRole([User::ROLE_TENANT]) ? 'pending_approval' : 'logged';
+        $status = $this->mustGoThroughOperationsApproval($user) ? 'pending_approval' : 'logged';
 
         $ticket = Ticket::create([
             ...$validated,
@@ -94,10 +100,69 @@ class TicketController extends Controller
 
         return response()->json([
             'message' => $status === 'pending_approval'
-                ? 'Ticket submitted and awaiting approval.'
+                ? 'Ticket created and sent for approval.'
                 : 'Ticket created successfully.',
             'data'    => TicketResource::make($ticket->load(['property', 'category', 'reporter'])),
         ], 201);
+    }
+
+    public function assign(TicketAssignRequest $request, Ticket $ticket)
+    {
+        $user = $request->user();
+
+        if (! $user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER])) {
+            return response()->json(['message' => 'You do not have permission to approve or assign tickets.'], 403);
+        }
+
+        $validated = $request->validated();
+
+        $technician = User::where('id', $validated['assigned_to'])
+            ->where('role', User::ROLE_TECHNICIAN)
+            ->first();
+
+        if (! $technician) {
+            return response()->json(['message' => 'Selected user is not a technician.'], 422);
+        }
+
+        $attributes = ['assigned_to' => $validated['assigned_to']];
+
+        if (in_array($ticket->status, ['logged', 'pending_approval', 'rejected'], true)) {
+            $attributes['status'] = 'assigned';
+        }
+
+        $ticket->update($attributes);
+
+        $ticketForNotification = $ticket->fresh();
+        app()->terminating(function () use ($ticketForNotification): void {
+            $this->notificationService->sendTicketAssigned($ticketForNotification);
+        });
+
+        return response()->json([
+            'message' => 'Ticket assigned successfully.',
+            'data' => TicketResource::make($ticket->fresh()->load(['property', 'category', 'reporter', 'technician'])),
+        ]);
+    }
+
+    public function update(TicketStoreRequest $request, Ticket $ticket)
+    {
+        $user = $request->user();
+
+        if (! $this->canEditTicket($user, $ticket)) {
+            return response()->json(['message' => 'You do not have permission to edit this ticket.'], 403);
+        }
+
+        $validated = $request->validated();
+
+        if (empty($validated['estimated_cost'])) {
+            $validated['estimated_cost_currency'] = null;
+        }
+
+        $ticket->update($validated);
+
+        return response()->json([
+            'message' => 'Ticket updated successfully.',
+            'data' => TicketResource::make($ticket->fresh()->load(['property', 'category', 'reporter', 'technician'])),
+        ]);
     }
 
     public function show(Request $request, Ticket $ticket)
@@ -121,22 +186,29 @@ class TicketController extends Controller
     public function changeStatus(TicketStatusRequest $request, Ticket $ticket)
     {
         $user = $request->user();
+        $previousStatus = $ticket->status;
+
+        if ($user->hasRole(User::ROLE_TECHNICIAN) && (int) $ticket->assigned_to !== (int) $user->id) {
+            return response()->json(['message' => 'You can only update your assigned tickets.'], 403);
+        }
 
         if ($user->hasRole(User::ROLE_TENANT)) {
             return response()->json(['message' => 'Tenants cannot change ticket status.'], 403);
         }
 
-        if ($user->hasRole(User::ROLE_TECHNICIAN)) {
-            if ((int) $ticket->assigned_to !== (int) $user->id) {
-                return response()->json(['message' => 'You can only update your own assigned tickets.'], 403);
-            }
-            if (! in_array($request->string('status')->toString(), ['in_progress', 'completed'], true)) {
-                return response()->json(['message' => 'Technicians can only move tickets to in_progress or completed.'], 403);
-            }
+        if ($user->hasRole(User::ROLE_TECHNICIAN) && ! in_array($request->string('status')->toString(), ['assigned', 'in_progress', 'completed'], true)) {
+            return response()->json(['message' => 'Technicians can only move assigned work to in progress or completed.'], 403);
+        }
+
+        if (
+            $user->hasRole(User::ROLE_OPERATIONS_MANAGER)
+            && in_array($request->string('status')->toString(), ['logged', 'on_hold'], true)
+            && empty($ticket->assigned_to)
+        ) {
+            return response()->json(['message' => 'Assign a technician before approving or placing this ticket on hold.'], 422);
         }
 
         $validated   = $request->validated();
-        $previous    = $ticket->status;
         $attributes  = ['status' => $validated['status']];
 
         if ($validated['status'] === 'in_progress' && ! $ticket->started_at) {
@@ -151,10 +223,10 @@ class TicketController extends Controller
 
         $ticket->update($attributes);
 
-        if ($previous !== $ticket->status) {
+        if ($previousStatus !== $ticket->status) {
             $fresh = $ticket->fresh();
-            app()->terminating(function () use ($fresh, $previous): void {
-                $this->notificationService->sendTicketStatusChanged($fresh, $previous);
+            app()->terminating(function () use ($fresh, $previousStatus): void {
+                $this->notificationService->sendTicketStatusChanged($fresh, $previousStatus);
             });
         }
 
@@ -262,6 +334,53 @@ class TicketController extends Controller
         return response()->json([
             'message' => 'Phase marked as completed.',
             'data'    => TicketPhaseResource::make($phase->fresh()),
+        ]);
+    }
+
+    public function updatePhase(Request $request, Ticket $ticket, TicketPhase $phase)
+    {
+        $user = $request->user();
+
+        if ($phase->ticket_id !== $ticket->id) {
+            return response()->json(['message' => 'Phase does not belong to this ticket.'], 404);
+        }
+
+        if (! $user->hasRole([User::ROLE_TECHNICIAN, User::ROLE_OPERATIONS_MANAGER, User::ROLE_ADMIN])) {
+            return response()->json(['message' => 'You do not have permission to update phases.'], 403);
+        }
+
+        if ($user->hasRole(User::ROLE_TECHNICIAN) && (int) $ticket->assigned_to !== (int) $user->id) {
+            return response()->json(['message' => 'You can only update phases on your assigned ticket.'], 403);
+        }
+
+        $validated = $request->validate([
+            'technician_notes' => ['nullable', 'string'],
+            'manager_notes' => ['nullable', 'string'],
+        ]);
+
+        if ($user->hasRole(User::ROLE_TECHNICIAN) && array_key_exists('manager_notes', $validated)) {
+            return response()->json(['message' => 'Technicians cannot update manager comments.'], 403);
+        }
+
+        $attributes = [];
+
+        if (array_key_exists('technician_notes', $validated)) {
+            $attributes['technician_notes'] = $validated['technician_notes'];
+        }
+
+        if (array_key_exists('manager_notes', $validated)) {
+            $attributes['manager_notes'] = $validated['manager_notes'];
+        }
+
+        if (empty($attributes)) {
+            return response()->json(['message' => 'No phase fields provided for update.'], 422);
+        }
+
+        $phase->update($attributes);
+
+        return response()->json([
+            'message' => 'Phase updated successfully.',
+            'data' => TicketPhaseResource::make($phase->fresh()->load('attachments.uploader:id,name')),
         ]);
     }
 
@@ -387,18 +506,82 @@ class TicketController extends Controller
 
     private function authorizeAccess(User $user, Ticket $ticket): void
     {
-        if ($user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER, User::ROLE_MANAGING_DIRECTOR, User::ROLE_GENERAL_MANAGER])) {
+        if ($this->hasFullTicketVisibility($user) || $user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER])) {
             return;
         }
 
-        if ($user->hasRole(User::ROLE_TECHNICIAN) && (int) $ticket->assigned_to === (int) $user->id) {
+        if (
+            $user->hasRole(User::ROLE_TECHNICIAN)
+            && (int) $ticket->assigned_to === (int) $user->id
+            && in_array($ticket->status, $this->technicianVisibleStatuses(), true)
+        ) {
             return;
         }
 
-        if ((int) $ticket->reported_by === (int) $user->id) {
+        if ($this->isReporterScopedRole($user) && (int) $ticket->reported_by === (int) $user->id) {
             return;
         }
 
         abort(403, 'You do not have access to this ticket.');
+    }
+
+    private function technicianVisibleStatuses(): array
+    {
+        return ['assigned', 'in_progress', 'on_hold', 'completed', 'closed', 'overdue'];
+    }
+
+    private function isReporterScopedRole(User $user): bool
+    {
+        return $user->hasRole([
+            User::ROLE_TENANT,
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
+    }
+
+    private function mustGoThroughOperationsApproval(User $user): bool
+    {
+        return $user->hasRole([
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
+    }
+
+    private function canCreateTickets(User $user): bool
+    {
+        return $user->hasRole([
+            User::ROLE_TENANT,
+            User::ROLE_ADMIN,
+            User::ROLE_OPERATIONS_MANAGER,
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
+    }
+
+    private function hasFullTicketVisibility(User $user): bool
+    {
+        return $user->hasRole([
+            User::ROLE_ADMIN,
+            User::ROLE_OPERATIONS_MANAGER,
+            User::ROLE_MANAGING_DIRECTOR,
+            User::ROLE_GENERAL_MANAGER,
+        ]);
+    }
+
+    private function canEditTicket(User $user, Ticket $ticket): bool
+    {
+        if ($user->hasRole([User::ROLE_ADMIN, User::ROLE_OPERATIONS_MANAGER])) {
+            return true;
+        }
+
+        if (
+            $this->isReporterScopedRole($user)
+            && (int) $ticket->reported_by === (int) $user->id
+            && in_array($ticket->status, ['pending_approval', 'logged', 'rejected'], true)
+        ) {
+            return true;
+        }
+
+        return false;
     }
 }

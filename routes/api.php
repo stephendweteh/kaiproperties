@@ -84,12 +84,15 @@ Route::prefix('mobile/v1')->name('mobile.v1.')->group(function (): void {
         Route::get('/tickets', [MobileTicketController::class, 'index'])->name('tickets.index');
         Route::post('/tickets', [MobileTicketController::class, 'store'])->name('tickets.store');
         Route::get('/tickets/{ticket}', [MobileTicketController::class, 'show'])->name('tickets.show');
+        Route::patch('/tickets/{ticket}', [MobileTicketController::class, 'update'])->name('tickets.update');
+        Route::patch('/tickets/{ticket}/assign', [MobileTicketController::class, 'assign'])->name('tickets.assign');
         Route::patch('/tickets/{ticket}/status', [MobileTicketController::class, 'changeStatus'])->name('tickets.status');
         Route::post('/tickets/{ticket}/attachments', [MobileTicketController::class, 'uploadAttachment'])->name('tickets.attachments.upload');
 
         // Ticket Phases
         Route::get('/tickets/{ticket}/phases', [MobileTicketController::class, 'phases'])->name('tickets.phases.index');
         Route::post('/tickets/{ticket}/phases', [MobileTicketController::class, 'addPhase'])->name('tickets.phases.store');
+        Route::patch('/tickets/{ticket}/phases/{phase}', [MobileTicketController::class, 'updatePhase'])->name('tickets.phases.update');
         Route::patch('/tickets/{ticket}/phases/{phase}/complete', [MobileTicketController::class, 'completePhase'])->name('tickets.phases.complete');
         Route::post('/tickets/{ticket}/phases/{phase}/attachments', [MobileTicketController::class, 'uploadPhaseAttachment'])->name('tickets.phases.attachments.upload');
 
