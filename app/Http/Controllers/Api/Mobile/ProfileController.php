@@ -46,6 +46,7 @@ class ProfileController extends Controller
         return response()->json([
             'message'           => 'Profile photo updated.',
             'profile_photo_url' => asset('storage/'.$path),
+            'user'              => UserResource::make($user->fresh()),
         ]);
     }
 }

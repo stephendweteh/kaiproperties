@@ -125,7 +125,7 @@ class TicketController extends Controller
             'message' => $status === 'pending_approval'
                 ? 'Ticket created and sent for approval.'
                 : 'Ticket created successfully.',
-            'data'    => TicketResource::make($ticket->load(['property', 'category', 'reporter'])),
+            'data'    => TicketResource::make($ticket->load(['property', 'category', 'reporter', 'technician', 'attachments.uploader:id,name'])),
         ], 201);
     }
 

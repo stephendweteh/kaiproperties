@@ -34,6 +34,7 @@ class TicketResource extends JsonResource
             'reporter' => UserResource::make($this->whenLoaded('reporter')),
             'technician' => UserResource::make($this->whenLoaded('technician')),
             'cost_requests' => CostRequestResource::collection($this->whenLoaded('costRequests')),
+            'attachments' => TicketAttachmentResource::collection($this->whenLoaded('attachments')),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
