@@ -48,6 +48,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   bool _savingPhase = false;
   final ImagePicker _imagePicker = ImagePicker();
 
+  int? _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -63,9 +69,21 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       final items = await ApiService.instance.getTechnicians();
       if (!mounted) return;
       setState(() {
-        _technicians = items.whereType<Map<String, dynamic>>().toList(
-          growable: false,
-        );
+        final normalized = <Map<String, dynamic>>[];
+        for (final item in items.whereType<Map<String, dynamic>>()) {
+          final id = _asInt(item['id']);
+          final name = item['name'] as String?;
+          if (id != null && name != null) {
+            normalized.add({'id': id, 'name': name});
+          }
+        }
+
+        final deduped = <int, Map<String, dynamic>>{};
+        for (final item in normalized) {
+          deduped[item['id'] as int] = item;
+        }
+
+        _technicians = deduped.values.toList(growable: false);
       });
     } catch (_) {}
   }
@@ -303,6 +321,58 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ],
           ),
           const SizedBox(height: 12),
+          if (ticket.attachments.isNotEmpty) ...[
+            _InfoCard(
+              children: [
+                const Text(
+                  'Task Attachments',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ...ticket.attachments.map(
+                  (attachment) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Icon(
+                          attachment.attachmentType == 'image'
+                              ? Icons.image_outlined
+                              : Icons.description_outlined,
+                          color: AppColors.primary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            attachment.fileName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatDateTime(attachment.createdAt),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
           _buildWorkProgressSection(context, ticket, user, prov),
           const SizedBox(height: 12),
           // Status actions
@@ -1077,7 +1147,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   ) {
     final currentTechId = ticket.technician?.id;
     final value = _selectedTechnicianId ?? currentTechId;
-    final validValue = _technicians.any((t) => t['id'] == value) ? value : null;
+    final validValue = _technicians.any((t) => _asInt(t['id']) == value)
+      ? value
+      : null;
 
     return Container(
       width: double.infinity,
@@ -1104,10 +1176,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             items: _technicians
                 .map(
                   (t) => DropdownMenuItem<int>(
-                    value: t['id'] as int,
+                    value: _asInt(t['id']),
                     child: Text(t['name'] as String? ?? 'Unknown'),
                   ),
                 )
+                .where((item) => item.value != null)
                 .toList(),
             onChanged: _assigning
                 ? null

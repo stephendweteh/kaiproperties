@@ -475,6 +475,11 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
       _error = null;
     });
 
+    final selectedAttachmentCount =
+      _imageAttachmentPaths.length +
+      _documentAttachmentPaths.length +
+      (_cameraAttachmentPath != null ? 1 : 0);
+
     final payload = {
       'title': _titleCtrl.text.trim(),
       'description': _descCtrl.text.trim(),
@@ -521,11 +526,14 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
       if (_isEditMode) {
         context.go('/tasks/${widget.ticketId}');
       } else {
+        final createdTicketId = ticketProvider.lastCreatedTicketId;
         context.go(
           '/task-success',
           extra: {
             'ticketNo': ticketProvider.lastCreatedTicketNo ?? '',
             'message': ticketProvider.lastCreateMessage,
+            'ticketId': createdTicketId,
+            'attachmentCount': selectedAttachmentCount,
           },
         );
       }

@@ -17,6 +17,7 @@ class TicketModel {
   final CategoryRef? category;
   final UserRef? reporter;
   final UserRef? technician;
+  final List<TicketAttachmentModel> attachments;
   final String? createdAt;
   final String? updatedAt;
 
@@ -39,6 +40,7 @@ class TicketModel {
     this.category,
     this.reporter,
     this.technician,
+    this.attachments = const [],
     this.createdAt,
     this.updatedAt,
   });
@@ -71,6 +73,10 @@ class TicketModel {
         technician: json['technician'] != null
             ? UserRef.fromJson(json['technician'] as Map<String, dynamic>)
             : null,
+        attachments: (json['attachments'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(TicketAttachmentModel.fromJson)
+          .toList(growable: false),
         createdAt: json['created_at'] as String?,
         updatedAt: json['updated_at'] as String?,
       );
@@ -122,4 +128,42 @@ class UserRef {
         name: json['name'] as String,
         email: json['email'] as String?,
       );
+}
+
+class TicketAttachmentModel {
+  final int id;
+  final String fileName;
+  final String mimeType;
+  final int? fileSize;
+  final String attachmentType;
+  final String? url;
+  final String? createdAt;
+
+  const TicketAttachmentModel({
+    required this.id,
+    required this.fileName,
+    required this.mimeType,
+    this.fileSize,
+    required this.attachmentType,
+    this.url,
+    this.createdAt,
+  });
+
+  factory TicketAttachmentModel.fromJson(Map<String, dynamic> json) {
+    int? asInt(dynamic value) {
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value);
+      return null;
+    }
+
+    return TicketAttachmentModel(
+      id: asInt(json['id']) ?? 0,
+      fileName: (json['file_name'] as String?) ?? 'File',
+      mimeType: (json['mime_type'] as String?) ?? 'application/octet-stream',
+      fileSize: asInt(json['file_size']),
+      attachmentType: (json['attachment_type'] as String?) ?? 'document',
+      url: json['url'] as String?,
+      createdAt: json['created_at'] as String?,
+    );
+  }
 }

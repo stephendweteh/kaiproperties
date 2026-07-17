@@ -65,9 +65,27 @@ GoRouter createAppRouter(AuthProvider auth) {
         builder: (_, state) {
           final extra = state.extra;
           if (extra is Map) {
+            int? ticketId;
+            final rawTicketId = extra['ticketId'];
+            if (rawTicketId is int) {
+              ticketId = rawTicketId;
+            } else if (rawTicketId is String) {
+              ticketId = int.tryParse(rawTicketId);
+            }
+
+            int attachmentCount = 0;
+            final rawAttachmentCount = extra['attachmentCount'];
+            if (rawAttachmentCount is int) {
+              attachmentCount = rawAttachmentCount;
+            } else if (rawAttachmentCount is String) {
+              attachmentCount = int.tryParse(rawAttachmentCount) ?? 0;
+            }
+
             return TaskSuccessScreen(
               ticketNo: (extra['ticketNo'] as String?) ?? '',
               message: extra['message'] as String?,
+              ticketId: ticketId,
+              attachmentCount: attachmentCount,
             );
           }
 

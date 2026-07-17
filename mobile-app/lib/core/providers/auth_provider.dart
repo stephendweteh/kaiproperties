@@ -125,9 +125,20 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final data = await ApiService.instance.uploadProfilePhoto(filePath);
-      final profilePhotoUrl = data['profile_photo_url'] as String?;
-      if (_user != null && profilePhotoUrl != null) {
-        _user = _user!.copyWith(profilePhotoUrl: profilePhotoUrl);
+      final userJson = data['user'];
+      if (userJson is Map<String, dynamic>) {
+        _user = UserModel.fromJson(userJson);
+        await StorageService.instance.saveUser(_user!.toJson());
+      } else {
+        final profilePhotoUrl =
+            UserModel.normalizeProfilePhotoUrl(data['profile_photo_url']);
+        if (_user != null && profilePhotoUrl != null) {
+          _user = _user!.copyWith(profilePhotoUrl: profilePhotoUrl);
+          await StorageService.instance.saveUser(_user!.toJson());
+        }
+      }
+
+      if (_user != null) {
         await StorageService.instance.saveUser(_user!.toJson());
       }
       _loading = false;

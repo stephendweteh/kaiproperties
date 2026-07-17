@@ -1,3 +1,5 @@
+import '../constants/app_constants.dart';
+
 class UserModel {
   final int id;
   final String name;
@@ -21,7 +23,7 @@ class UserModel {
     email: json['email'] as String,
     role: json['role'] as String,
     phone: json['phone'] as String?,
-    profilePhotoUrl: json['profile_photo_url'] as String?,
+    profilePhotoUrl: normalizeProfilePhotoUrl(json['profile_photo_url']),
   );
 
   Map<String, dynamic> toJson() => {
@@ -47,8 +49,59 @@ class UserModel {
       email: email ?? this.email,
       role: role ?? this.role,
       phone: phone ?? this.phone,
-      profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
+      profilePhotoUrl: profilePhotoUrl == null
+          ? this.profilePhotoUrl
+          : normalizeProfilePhotoUrl(profilePhotoUrl),
     );
+  }
+
+  static String? normalizeProfilePhotoUrl(dynamic rawUrl) {
+    final raw = (rawUrl as String?)?.trim();
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+
+    final baseUri = Uri.parse(kBaseUrl);
+    final origin = '${baseUri.scheme}://${baseUri.authority}';
+
+    if (raw.startsWith('//')) {
+      return '${baseUri.scheme}:$raw';
+    }
+
+    final parsed = Uri.tryParse(raw);
+    if (parsed != null && parsed.hasScheme) {
+      if (parsed.host == 'localhost' ||
+          parsed.host == '127.0.0.1' ||
+          parsed.host == '0.0.0.0') {
+        return Uri(
+          scheme: baseUri.scheme,
+          host: baseUri.host,
+          port: baseUri.hasPort ? baseUri.port : null,
+          path: parsed.path,
+          query: parsed.hasQuery ? parsed.query : null,
+          fragment: parsed.hasFragment ? parsed.fragment : null,
+        ).toString();
+      }
+
+      if (parsed.host == baseUri.host && parsed.scheme != baseUri.scheme) {
+        return Uri(
+          scheme: baseUri.scheme,
+          host: parsed.host,
+          port: parsed.hasPort ? parsed.port : null,
+          path: parsed.path,
+          query: parsed.hasQuery ? parsed.query : null,
+          fragment: parsed.hasFragment ? parsed.fragment : null,
+        ).toString();
+      }
+
+      return parsed.toString();
+    }
+
+    if (raw.startsWith('/')) {
+      return '$origin$raw';
+    }
+
+    return '$origin/$raw';
   }
 
   bool get isAdmin => role == 'admin';

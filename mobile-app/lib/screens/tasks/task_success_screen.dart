@@ -5,11 +5,15 @@ import '../../core/constants/app_colors.dart';
 class TaskSuccessScreen extends StatelessWidget {
   final String ticketNo;
   final String? message;
+  final int? ticketId;
+  final int attachmentCount;
 
   const TaskSuccessScreen({
     super.key,
     required this.ticketNo,
     this.message,
+    this.ticketId,
+    this.attachmentCount = 0,
   });
 
   @override
@@ -27,7 +31,7 @@ class TaskSuccessScreen extends StatelessWidget {
                 width: 110,
                 height: 110,
                 decoration: BoxDecoration(
-                  color: AppColors.statusCompleted.withOpacity(0.12),
+                  color: AppColors.statusCompleted.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: Container(
@@ -69,7 +73,40 @@ class TaskSuccessScreen extends StatelessWidget {
                   height: 1.6,
                 ),
               ),
+              if (attachmentCount > 0) ...[
+                const SizedBox(height: 10),
+                Text(
+                  '$attachmentCount attachment${attachmentCount == 1 ? '' : 's'} uploaded.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
               const SizedBox(height: 40),
+              if (ticketId != null) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/tasks/$ticketId'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.statusCompleted,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    child: const Text('View Task Details',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               SizedBox(
                 width: double.infinity,
                 height: 52,
