@@ -15,7 +15,7 @@ class DeviceTokenRequest extends FormRequest
     {
         return [
             'token'       => ['required', 'string', 'max:500'],
-            'platform'    => ['required', 'in:android,ios'],
+            'platform'    => ['required', 'in:android,ios,web'],
             'device_name' => ['nullable', 'string', 'max:255'],
         ];
     }

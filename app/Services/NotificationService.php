@@ -13,6 +13,10 @@ use Illuminate\Support\Facades\Mail;
 
 class NotificationService
 {
+    public function __construct(private readonly FirebasePushService $firebasePushService)
+    {
+    }
+
     public function sendSignupPendingApproval(User $user): void
     {
         $subject = 'Sign-up Pending Approval';
@@ -95,10 +99,30 @@ class NotificationService
         $this->sendEmail($technician->email, $subject, $message);
         $this->sendSms($technician->phone, "Assigned {$ticket->ticket_no}: {$ticket->title}");
 
+        $this->firebasePushService->sendToUsers(
+            [$technician],
+            $subject,
+            "Assigned {$ticket->ticket_no}: {$ticket->title}",
+            [
+                'type' => 'ticket_assigned',
+                'ticket_id' => (string) $ticket->id,
+                'status' => (string) $ticket->status,
+                'link' => route('tickets.show', $ticket),
+            ],
+            route('tickets.show', $ticket)
+        );
+
         $this->notifyOperationsManagers(
             $subject,
             "Ticket {$ticket->ticket_no} has been assigned to {$technician->name}.\n\nTitle: {$ticket->title}",
-            "Ticket assigned: {$ticket->ticket_no}"
+            "Ticket assigned: {$ticket->ticket_no}",
+            [
+                'type' => 'ticket_assigned',
+                'ticket_id' => (string) $ticket->id,
+                'status' => (string) $ticket->status,
+                'link' => route('tickets.show', $ticket),
+            ],
+            route('tickets.show', $ticket)
         );
     }
 
@@ -120,7 +144,19 @@ class NotificationService
             ->filter()
             ->merge($this->operationsManagers());
 
-        $this->notifyRecipients($recipients, $subject, $message, $smsMessage);
+        $this->notifyRecipients(
+            $recipients,
+            $subject,
+            $message,
+            $smsMessage,
+            [
+                'type' => 'ticket_status_changed',
+                'ticket_id' => (string) $ticket->id,
+                'status' => (string) $ticket->status,
+                'link' => route('tickets.show', $ticket),
+            ],
+            route('tickets.show', $ticket)
+        );
     }
 
     public function sendTicketLogged(Ticket $ticket): void
@@ -140,7 +176,19 @@ class NotificationService
             ->filter()
             ->merge($this->operationsManagers());
 
-        $this->notifyRecipients($recipients, $subject, $message, $smsMessage);
+        $this->notifyRecipients(
+            $recipients,
+            $subject,
+            $message,
+            $smsMessage,
+            [
+                'type' => 'ticket_logged',
+                'ticket_id' => (string) $ticket->id,
+                'status' => (string) $ticket->status,
+                'link' => route('tickets.show', $ticket),
+            ],
+            route('tickets.show', $ticket)
+        );
     }
 
     public function sendTicketDeleted(Ticket $ticket): void
@@ -158,7 +206,18 @@ class NotificationService
             ->filter()
             ->merge($this->operationsManagers());
 
-        $this->notifyRecipients($recipients, $subject, $message, $smsMessage);
+        $this->notifyRecipients(
+            $recipients,
+            $subject,
+            $message,
+            $smsMessage,
+            [
+                'type' => 'ticket_deleted',
+                'ticket_id' => (string) $ticket->id,
+                'link' => route('tickets.index'),
+            ],
+            route('tickets.index')
+        );
     }
 
     public function sendCostRequestReviewed(CostRequest $costRequest): void
@@ -183,6 +242,20 @@ class NotificationService
 
         $this->sendEmail($requester->email, $subject, $message);
         $this->sendSms($requester->phone, "Cost request {$decision}: {$ticket->ticket_no}");
+
+        $this->firebasePushService->sendToUsers(
+            [$requester],
+            $subject,
+            "Cost request {$decision}: {$ticket->ticket_no}",
+            [
+                'type' => 'cost_request_reviewed',
+                'ticket_id' => (string) $ticket->id,
+                'cost_request_id' => (string) $costRequest->id,
+                'status' => (string) $costRequest->status,
+                'link' => route('tickets.show', $ticket),
+            ],
+            route('tickets.show', $ticket)
+        );
     }
 
     public function sendEmail(?string $to, string $subject, string $content): bool
@@ -289,19 +362,35 @@ class NotificationService
             ->get(['id', 'name', 'email', 'phone', 'role']);
     }
 
-    private function notifyOperationsManagers(string $subject, string $message, string $smsMessage): void
+    private function notifyOperationsManagers(
+        string $subject,
+        string $message,
+        string $smsMessage,
+        array $pushData = [],
+        ?string $pushLink = null,
+    ): void
     {
-        $this->notifyRecipients($this->operationsManagers(), $subject, $message, $smsMessage);
+        $this->notifyRecipients($this->operationsManagers(), $subject, $message, $smsMessage, $pushData, $pushLink);
     }
 
-    private function notifyRecipients(iterable $recipients, string $subject, string $message, string $smsMessage): void
+    private function notifyRecipients(
+        iterable $recipients,
+        string $subject,
+        string $message,
+        string $smsMessage,
+        array $pushData = [],
+        ?string $pushLink = null,
+    ): void
     {
-        collect($recipients)
+        $users = collect($recipients)
             ->filter(fn ($recipient) => $recipient instanceof User)
-            ->unique('id')
-            ->each(function (User $recipient) use ($subject, $message, $smsMessage): void {
+            ->unique('id');
+
+        $users->each(function (User $recipient) use ($subject, $message, $smsMessage): void {
                 $this->sendEmail($recipient->email, $subject, $message);
                 $this->sendSms($recipient->phone, $smsMessage);
             });
+
+        $this->firebasePushService->sendToUsers($users, $subject, $smsMessage, $pushData, $pushLink);
     }
 }

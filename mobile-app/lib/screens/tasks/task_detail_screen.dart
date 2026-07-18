@@ -823,53 +823,73 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
           ],
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildPhaseActionChip(
-                icon: Icons.edit_note_outlined,
-                label: canEditManagerComment ? 'Add Comment' : 'Respond',
-                onPressed: phaseId == null || _savingPhase
-                    ? null
-                    : () => _showUpdatePhaseDialog(
-                          ticketId,
-                        phaseId,
-                          currentTechnicianNotes: notes,
-                          currentManagerNotes: managerNotes,
-                          allowTechnicianNotes: canEditTechnicianResponse,
-                          allowManagerNotes: canEditManagerComment,
-                        ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final actions = <({IconData icon, String label, VoidCallback? onPressed})>[
+                (
+                  icon: Icons.edit_note_outlined,
+                  label: canEditManagerComment ? 'Add Comment' : 'Respond',
+                  onPressed: phaseId == null || _savingPhase
+                      ? null
+                      : () => _showUpdatePhaseDialog(
+                            ticketId,
+                            phaseId,
+                            currentTechnicianNotes: notes,
+                            currentManagerNotes: managerNotes,
+                            allowTechnicianNotes: canEditTechnicianResponse,
+                            allowManagerNotes: canEditManagerComment,
+                          ),
                 ),
-              _buildPhaseActionChip(
-                icon: Icons.photo_camera_outlined,
-                label: 'Take Photo',
-                onPressed: canUploadForPhase && !_savingPhase
-                  ? () => _uploadPhaseFromCamera(ticketId, phaseId)
-                    : null,
-              ),
-              _buildPhaseActionChip(
-                icon: Icons.image_outlined,
-                label: 'Upload Image',
-                onPressed: canUploadForPhase && !_savingPhase
-                  ? () => _uploadPhaseFromGallery(ticketId, phaseId)
-                    : null,
-              ),
-              _buildPhaseActionChip(
-                icon: Icons.attach_file_outlined,
-                label: 'Upload Document',
-                onPressed: canUploadForPhase && !_savingPhase
-                  ? () => _uploadPhaseDocument(ticketId, phaseId)
-                    : null,
-              ),
-              _buildPhaseActionChip(
-                icon: Icons.check_circle_outline,
-                label: 'Mark Completed',
-                onPressed: canUploadForPhase && !_savingPhase
-                  ? () => _completePhase(ticketId, phaseId, prov)
-                    : null,
-              ),
-            ],
+                (
+                  icon: Icons.photo_camera_outlined,
+                  label: 'Take Photo',
+                  onPressed: canUploadForPhase && !_savingPhase
+                      ? () => _uploadPhaseFromCamera(ticketId, phaseId)
+                      : null,
+                ),
+                (
+                  icon: Icons.image_outlined,
+                  label: 'Upload Image',
+                  onPressed: canUploadForPhase && !_savingPhase
+                      ? () => _uploadPhaseFromGallery(ticketId, phaseId)
+                      : null,
+                ),
+                (
+                  icon: Icons.attach_file_outlined,
+                  label: 'Upload Document',
+                  onPressed: canUploadForPhase && !_savingPhase
+                      ? () => _uploadPhaseDocument(ticketId, phaseId)
+                      : null,
+                ),
+                (
+                  icon: Icons.check_circle_outline,
+                  label: 'Mark Completed',
+                  onPressed: canUploadForPhase && !_savingPhase
+                      ? () => _completePhase(ticketId, phaseId, prov)
+                      : null,
+                ),
+              ];
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: actions.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 2.4,
+                ),
+                itemBuilder: (context, index) {
+                  final action = actions[index];
+                  return _buildPhaseActionChip(
+                    icon: action.icon,
+                    label: action.label,
+                    onPressed: action.onPressed,
+                  );
+                },
+              );
+            },
           ),
           if (attachments.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -1007,11 +1027,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     required String label,
     required VoidCallback? onPressed,
   }) {
-    return OutlinedButton.icon(
+    return OutlinedButton(
       onPressed: onPressed,
-      icon: Icon(icon, size: 16),
-      label: Text(label),
       style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(44),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         side: BorderSide(
           color: onPressed == null ? AppColors.divider : AppColors.primary,
         ),
@@ -1020,6 +1040,21 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
       ),
     );
   }

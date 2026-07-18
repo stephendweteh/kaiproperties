@@ -337,4 +337,8 @@ class ApiService {
       },
     );
   }
+
+  Future<void> unregisterDeviceToken(String token) async {
+    await dio.delete('/device-tokens/${Uri.encodeComponent(token)}');
+  }
 }

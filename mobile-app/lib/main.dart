@@ -7,6 +7,7 @@ import 'core/providers/ticket_provider.dart';
 import 'core/providers/dashboard_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/api_service.dart';
+import 'core/services/push_notification_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +44,23 @@ class _KaiPropertiesAppState extends State<KaiPropertiesApp> {
         });
       },
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await PushNotificationService.instance.initialize(
+        onNotificationTap: (ticketId) async {
+          if (ticketId == null) {
+            _router.go('/tasks');
+            return;
+          }
+
+          _router.go('/tasks/$ticketId');
+        },
+      );
+
+      if (_authProvider.isAuthenticated) {
+        await PushNotificationService.instance.syncDeviceToken();
+      }
+    });
   }
 
   @override

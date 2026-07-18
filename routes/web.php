@@ -8,12 +8,14 @@ use App\Http\Controllers\Web\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\PwaController;
+use App\Http\Controllers\Web\PushController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\TicketController;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
+Route::get('/firebase-messaging-sw.js', [PushController::class, 'firebaseMessagingServiceWorker'])->name('push.service-worker');
 
 Route::get('/media/{path}', function (string $path) {
 	abort_if(str_contains($path, '..'), 404);
@@ -58,6 +60,8 @@ Route::middleware('auth')->group(function (): void {
 
 	Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
 	Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+	Route::post('/push/device-token', [PushController::class, 'storeDeviceToken'])->name('push.device-token.store');
+	Route::delete('/push/device-token', [PushController::class, 'destroyDeviceToken'])->name('push.device-token.destroy');
 
 	Route::prefix('admin')->name('admin.')->middleware('admin')->group(function (): void {
 		// Read-only routes — accessible to all admin roles including Managing Director & General Manager

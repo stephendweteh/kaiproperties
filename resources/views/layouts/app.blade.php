@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     @php
         $pwaSiteName = \App\Models\Setting::valueFor('site_name', 'Kai Properties');
         $pwaIconVersion = '1';
@@ -442,6 +443,127 @@
         window.addEventListener('load', hideOverlayAfterNotifications);
         window.addEventListener('pageshow', hideOverlayAfterNotifications);
     })();
+
+    @auth
+    (function () {
+        const firebaseConfig = {
+            apiKey: @json(config('services.firebase.web.api_key')),
+            authDomain: @json(config('services.firebase.web.auth_domain')),
+            projectId: @json(config('services.firebase.web.project_id')),
+            storageBucket: @json(config('services.firebase.web.storage_bucket')),
+            messagingSenderId: @json(config('services.firebase.web.messaging_sender_id')),
+            appId: @json(config('services.firebase.web.app_id')),
+        };
+
+        const vapidKey = @json(config('services.firebase.web_vapid_key'));
+
+        if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.messagingSenderId || !firebaseConfig.appId || !vapidKey) {
+            return;
+        }
+
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        const ensureScript = function (src) {
+            return new Promise(function (resolve, reject) {
+                const existing = document.querySelector('script[src="' + src + '"]');
+                if (existing) {
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        };
+
+        const registerToken = async function (token) {
+            await fetch(@json(route('push.device-token.store')), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                },
+                body: JSON.stringify({
+                    token,
+                    device_name: navigator.userAgent.slice(0, 240),
+                }),
+                credentials: 'same-origin',
+            });
+        };
+
+        const handleMessageTap = function (payload) {
+            const data = payload?.data || {};
+            if (data.ticket_id) {
+                window.location.href = '/tickets/' + data.ticket_id;
+                return;
+            }
+
+            if (data.link) {
+                window.location.href = data.link;
+            }
+        };
+
+        const initPush = async function () {
+            try {
+                await ensureScript('https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js');
+                await ensureScript('https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js');
+
+                if (!window.firebase) {
+                    return;
+                }
+
+                if (window.firebase.apps.length === 0) {
+                    window.firebase.initializeApp(firebaseConfig);
+                }
+
+                const serviceWorkerRegistration = await navigator.serviceWorker.register(@json(route('push.service-worker')));
+
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    return;
+                }
+
+                const messaging = window.firebase.messaging();
+                const token = await messaging.getToken({
+                    vapidKey,
+                    serviceWorkerRegistration,
+                });
+
+                if (token) {
+                    await registerToken(token);
+                }
+
+                messaging.onMessage((payload) => {
+                    const title = payload?.notification?.title || 'KAI Properties';
+                    const options = {
+                        body: payload?.notification?.body || 'You have a new update.',
+                    };
+
+                    if (Notification.permission === 'granted') {
+                        const notification = new Notification(title, options);
+                        notification.onclick = function () {
+                            window.focus();
+                            handleMessageTap(payload);
+                        };
+                    }
+                });
+            } catch (error) {
+                console.warn('Web push initialization failed', error);
+            }
+        };
+
+        if ('serviceWorker' in navigator && 'Notification' in window) {
+            window.addEventListener('load', function () {
+                initPush();
+            });
+        }
+    })();
+    @endauth
 
 </script>
 </body>
