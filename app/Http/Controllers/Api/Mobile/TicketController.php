@@ -23,11 +23,48 @@ use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class TicketController extends Controller
 {
     public function __construct(private readonly NotificationService $notificationService)
     {
+    }
+
+    public function showTicketAttachment(Request $request, TicketAttachment $attachment)
+    {
+        $path = $attachment->file_path;
+
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->response(
+            $path,
+            $attachment->file_name,
+            [
+                'Cache-Control' => 'public, max-age=3600',
+                'Content-Type' => $attachment->mime_type ?: 'application/octet-stream',
+            ]
+        );
+    }
+
+    public function showPhaseAttachment(Request $request, PhaseAttachment $attachment)
+    {
+        $path = $attachment->file_path;
+
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->response(
+            $path,
+            $attachment->file_name,
+            [
+                'Cache-Control' => 'public, max-age=3600',
+                'Content-Type' => $attachment->mime_type ?: 'application/octet-stream',
+            ]
+        );
     }
 
     // -----------------------------------------------------------------------

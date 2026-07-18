@@ -5,11 +5,29 @@ namespace App\Http\Controllers\Api\Mobile;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Mobile\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
+    public function showPhoto(Request $request, User $user)
+    {
+        $path = $user->profile_photo_path;
+
+        if (! $path || ! Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->response(
+            $path,
+            basename($path),
+            [
+                'Cache-Control' => 'public, max-age=3600',
+            ]
+        );
+    }
+
     public function show(Request $request)
     {
         return response()->json([
@@ -43,10 +61,12 @@ class ProfileController extends Controller
 
         $user->update(['profile_photo_path' => $path]);
 
+        $freshUser = $user->fresh();
+
         return response()->json([
             'message'           => 'Profile photo updated.',
-            'profile_photo_url' => asset('storage/'.$path),
-            'user'              => UserResource::make($user->fresh()),
+            'profile_photo_url' => UserResource::make($freshUser)->toArray($request)['profile_photo_url'],
+            'user'              => UserResource::make($freshUser),
         ]);
     }
 }

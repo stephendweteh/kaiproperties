@@ -59,6 +59,9 @@ Route::prefix('mobile/v1')->name('mobile.v1.')->group(function (): void {
     Route::get('/config', [AppConfigController::class, 'index'])->name('config');
     Route::post('/auth/register', [MobileAuthController::class, 'register'])->name('auth.register');
     Route::post('/auth/login', [MobileAuthController::class, 'login'])->name('auth.login');
+    Route::get('/users/{user}/photo', [ProfileController::class, 'showPhoto'])->name('profile.photo.show');
+    Route::get('/tickets/attachments/{attachment}', [MobileTicketController::class, 'showTicketAttachment'])->name('tickets.attachments.show');
+    Route::get('/phases/attachments/{attachment}', [MobileTicketController::class, 'showPhaseAttachment'])->name('phases.attachments.show');
 
     // Protected ───────────────────────────────────────────────────────────────
     Route::middleware('auth:sanctum')->group(function (): void {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/models/user_model.dart';
 import '../../core/providers/ticket_provider.dart';
@@ -114,6 +115,147 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Future<void> _refreshTicketData() async {
     await context.read<TicketProvider>().loadTicket(widget.ticketId);
     await _loadPhases();
+  }
+
+  Future<void> _openTaskAttachment(TicketAttachmentModel attachment) async {
+    await _openAttachment(
+      url: attachment.url,
+      attachmentType: attachment.attachmentType,
+      title: attachment.fileName,
+    );
+  }
+
+  Future<void> _downloadTaskAttachment(TicketAttachmentModel attachment) async {
+    await _downloadAttachment(url: attachment.url);
+  }
+
+  Future<void> _openPhaseAttachment(Map<String, dynamic> attachment) async {
+    await _openAttachment(
+      url: attachment['url'] as String?,
+      attachmentType: (attachment['attachment_type'] as String?) ?? 'document',
+      title: (attachment['file_name'] as String?) ?? 'Attachment',
+    );
+  }
+
+  Future<void> _downloadPhaseAttachment(Map<String, dynamic> attachment) async {
+    await _downloadAttachment(url: attachment['url'] as String?);
+  }
+
+  Future<void> _openAttachment({
+    required String? url,
+    required String attachmentType,
+    required String title,
+  }) async {
+    final normalized = url?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Attachment URL is unavailable.')),
+      );
+      return;
+    }
+
+    final uri = Uri.tryParse(normalized);
+    if (uri == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Attachment URL is invalid.')),
+      );
+      return;
+    }
+
+    final lower = normalized.toLowerCase();
+    final isImage = attachmentType == 'image' ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.webp');
+
+    if (isImage) {
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => _AttachmentImageViewer(
+            title: title,
+            imageUrl: uri.toString(),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open attachment on this device.')),
+      );
+    }
+  }
+
+  Future<void> _downloadAttachment({required String? url}) async {
+    final normalized = url?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Download URL is unavailable.')),
+      );
+      return;
+    }
+
+    final uri = Uri.tryParse(normalized);
+    if (uri == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Download URL is invalid.')),
+      );
+      return;
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to start download on this device.')),
+      );
+    }
+  }
+
+  String _formatFileSize(int? bytes) {
+    if (bytes == null || bytes <= 0) return '-';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    double size = bytes.toDouble();
+    var unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+    final value = unitIndex == 0 ? size.toStringAsFixed(0) : size.toStringAsFixed(1);
+    return '$value ${units[unitIndex]}';
+  }
+
+  Widget _attachmentTypeBadge(String attachmentType) {
+    final isImage = attachmentType == 'image';
+    final label = isImage ? 'Image' : 'Document';
+    final bg = isImage
+        ? AppColors.primary.withValues(alpha: 0.12)
+        : AppColors.accent.withValues(alpha: 0.15);
+    final fg = isImage ? AppColors.primary : AppColors.accent;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: fg,
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
   }
 
   @override
@@ -336,36 +478,80 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 ...ticket.attachments.map(
                   (attachment) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Icon(
-                          attachment.attachmentType == 'image'
-                              ? Icons.image_outlined
-                              : Icons.description_outlined,
-                          color: AppColors.primary,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            attachment.fileName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 12,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () => _openTaskAttachment(attachment),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              attachment.attachmentType == 'image'
+                                  ? Icons.image_outlined
+                                  : Icons.description_outlined,
+                              color: AppColors.primary,
+                              size: 16,
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          attachment.fileName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: AppColors.textPrimary,
+                                            fontSize: 12,
+                                            decoration: TextDecoration.underline,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      _attachmentTypeBadge(attachment.attachmentType),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _formatFileSize(attachment.fileSize),
+                                    style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => _downloadTaskAttachment(attachment),
+                              tooltip: 'Download',
+                              icon: const Icon(
+                                Icons.download_outlined,
+                                size: 16,
+                                color: AppColors.textSecondary,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            Text(
+                              _formatDateTime(attachment.createdAt),
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 10,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.open_in_new,
+                              size: 14,
+                              color: AppColors.textSecondary,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _formatDateTime(attachment.createdAt),
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -701,39 +887,84 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 final fileName = (attachment['file_name'] as String?) ?? 'File';
                 final attachmentType =
                     (attachment['attachment_type'] as String?) ?? 'document';
+                final fileSize = _asInt(attachment['file_size']);
                 final createdAt = attachment['created_at'] as String?;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Icon(
-                        attachmentType == 'image'
-                            ? Icons.image_outlined
-                            : Icons.description_outlined,
-                        color: AppColors.primary,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          fileName,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 12,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => _openPhaseAttachment(attachment),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            attachmentType == 'image'
+                                ? Icons.image_outlined
+                                : Icons.description_outlined,
+                            color: AppColors.primary,
+                            size: 16,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        fileName,
+                                        style: const TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 12,
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    _attachmentTypeBadge(attachmentType),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _formatFileSize(fileSize),
+                                  style: const TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => _downloadPhaseAttachment(attachment),
+                            tooltip: 'Download',
+                            icon: const Icon(
+                              Icons.download_outlined,
+                              size: 16,
+                              color: AppColors.textSecondary,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          Text(
+                            _formatDateTime(createdAt),
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 10,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.open_in_new,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _formatDateTime(createdAt),
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 );
               },
@@ -1332,6 +1563,47 @@ class _DetailRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AttachmentImageViewer extends StatelessWidget {
+  final String title;
+  final String imageUrl;
+
+  const _AttachmentImageViewer({required this.title, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 14),
+        ),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Unable to load image.',
+                  style: TextStyle(color: Colors.white),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }

@@ -14,13 +14,24 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $photoUrl = null;
+
+        if ($this->profile_photo_path) {
+            $photoPath = route('mobile.v1.profile.photo.show', [
+                'user' => $this->id,
+                'v' => $this->updated_at?->timestamp,
+            ], false);
+
+            $photoUrl = $request->getSchemeAndHttpHost().$photoPath;
+        }
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
             'role' => $this->role,
             'phone' => $this->phone,
-            'profile_photo_url' => $this->profile_photo_path ? asset('storage/'.$this->profile_photo_path) : null,
+            'profile_photo_url' => $photoUrl,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

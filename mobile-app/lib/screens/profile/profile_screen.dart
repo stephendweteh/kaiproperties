@@ -228,22 +228,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               CircleAvatar(
                 radius: 34,
                 backgroundColor: AppColors.primary,
-                backgroundImage: user?.profilePhotoUrl != null
-                    ? NetworkImage(user!.profilePhotoUrl!)
-                    : null,
-                child: user?.profilePhotoUrl == null
-                    ? Text(
-                        (name?.isNotEmpty == true
-                                ? name![0]
-                                : 'U')
-                            .toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
-                        ),
-                      )
-                    : null,
+                child: _buildAvatarContent(name, user?.profilePhotoUrl),
               ),
               Positioned(
                 right: -6,
@@ -293,6 +278,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarContent(String? name, String? profilePhotoUrl) {
+    final fallback = Text(
+      (name?.isNotEmpty == true ? name![0] : 'U').toUpperCase(),
+      style: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+        fontSize: 24,
+      ),
+    );
+
+    if (profilePhotoUrl == null || profilePhotoUrl.trim().isEmpty) {
+      return fallback;
+    }
+
+    return ClipOval(
+      child: Image.network(
+        profilePhotoUrl,
+        width: 68,
+        height: 68,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => fallback,
       ),
     );
   }
@@ -446,7 +456,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.divider.withOpacity(0.8)),
+          borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.8)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
