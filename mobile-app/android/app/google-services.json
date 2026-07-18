@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "152183113400",
+    "project_id": "kai-properties",
+    "storage_bucket": "kai-properties.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:152183113400:android:812d9d93397c725ccc164d",
+        "android_client_info": {
+          "package_name": "com.kai.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJ6kS_yF4N3BBetkSIuCkBCEYp1qMvRqw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
