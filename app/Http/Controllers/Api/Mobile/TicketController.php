@@ -81,7 +81,7 @@ class TicketController extends Controller
 
         $validated = $request->validated();
 
-        $reportedBy = $validated['reported_by'] ?? null;
+        $reportedBy = $validated['reported_by'] ?? $user->id;
         if ($isReporterScopedRole) {
             $reportedBy = $user->id;
         }

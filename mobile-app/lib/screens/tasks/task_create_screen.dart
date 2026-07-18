@@ -66,7 +66,8 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
 
   int? _asInt(dynamic value) {
     if (value is int) return value;
-    if (value is String) return int.tryParse(value);
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim());
     return null;
   }
 
@@ -270,7 +271,13 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
           .toList();
       _reporters = reporters
           .cast<Map<String, dynamic>>()
-          .where((r) => r['id'] != null && r['name'] != null)
+          .map((r) {
+            final id = _asInt(r['id']);
+            final name = (r['name'] as String?)?.trim();
+            if (id == null || name == null || name.isEmpty) return null;
+            return {'id': id, 'name': name};
+          })
+          .whereType<Map<String, dynamic>>()
           .toList();
 
       if (_reporters.isNotEmpty) {
@@ -436,8 +443,45 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
     }
   }
 
+  Future<int?> _resolveReportedByForSubmit() async {
+    if (_isReporterScopedRole || _isEditMode) return null;
+
+    final validReporterIds = _reporters
+        .map((r) => _asInt(r['id']))
+        .whereType<int>()
+        .toSet();
+
+    if (_reportedBy != null && validReporterIds.contains(_reportedBy)) {
+      return _reportedBy;
+    }
+
+    if (validReporterIds.isNotEmpty) {
+      return validReporterIds.first;
+    }
+
+    final currentUser = context.read<AuthProvider>().user;
+    if (currentUser?.id != null) {
+      return currentUser!.id;
+    }
+
+    try {
+      final meRes = await ApiService.instance.getMe();
+      final me = meRes['user'];
+      if (me is Map<String, dynamic>) {
+        return _asInt(me['id']);
+      }
+    } catch (_) {
+      // Keep submit flow alive even if /me fails.
+    }
+
+    return null;
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final ticketProvider = context.read<TicketProvider>();
+    final authProvider = context.read<AuthProvider>();
 
     if (_propertyId == null) {
       setState(() => _error = 'Please select a property.');
@@ -449,15 +493,34 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
       return;
     }
 
-    if (!_isReporterScopedRole && !_isEditMode && _reportedBy == null) {
-      final currentUser = context.read<AuthProvider>().user;
-      if (currentUser != null) {
-        _reportedBy = currentUser.id;
+    var resolvedReportedBy = await _resolveReportedByForSubmit();
+
+    // Final server-safe fallback: always inject current authenticated user as reporter.
+    if (!_isReporterScopedRole && !_isEditMode && resolvedReportedBy == null) {
+      resolvedReportedBy = authProvider.user?.id;
+    }
+
+    if (!_isReporterScopedRole && !_isEditMode && resolvedReportedBy == null) {
+      try {
+        final meRes = await ApiService.instance.getMe();
+        final me = meRes['user'];
+        if (me is Map<String, dynamic>) {
+          resolvedReportedBy = _asInt(me['id']);
+        }
+      } catch (_) {
+        // Fall through to explicit error below.
       }
     }
 
-    if (!_isReporterScopedRole && !_isEditMode && _reportedBy == null) {
-      setState(() => _error = 'Please select a reporter.');
+    if (!_isReporterScopedRole && !_isEditMode) {
+      _reportedBy = resolvedReportedBy;
+    }
+
+    if (!_isReporterScopedRole && !_isEditMode && resolvedReportedBy == null) {
+      setState(() {
+        _error =
+            'Unable to resolve reporter from current account. Please sign in again and retry.';
+      });
       return;
     }
 
@@ -491,11 +554,11 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
       'estimated_cost': estimatedCost,
       'estimated_cost_currency':
           estimatedCost == null ? null : _estimatedCostCurrency,
-      if (!_isReporterScopedRole && !_isEditMode) 'reported_by': _reportedBy,
+      if (!_isReporterScopedRole && !_isEditMode && resolvedReportedBy != null)
+        'reported_by': resolvedReportedBy,
       if (!_isEditMode) 'assigned_to': _assignedTo,
     };
 
-    final ticketProvider = context.read<TicketProvider>();
     final success = _isEditMode
         ? await ticketProvider.updateTicket(widget.ticketId!, payload)
         : await ticketProvider.createTicket(payload);
@@ -682,6 +745,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                           const SizedBox(height: 14),
                           DropdownButtonFormField<int>(
                             initialValue: _propertyId,
+                            isExpanded: true,
                             hint: const Text(
                               'Select Property',
                               style: TextStyle(
@@ -693,7 +757,11 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                                 .map(
                                   (p) => DropdownMenuItem<int>(
                                     value: _asInt(p['id']),
-                                    child: Text((p['name'] as String?) ?? 'Property'),
+                                    child: Text(
+                                      (p['name'] as String?) ?? 'Property',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 )
                                 .toList(),
@@ -706,6 +774,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                           const SizedBox(height: 14),
                           DropdownButtonFormField<int>(
                             initialValue: _categoryId,
+                            isExpanded: true,
                             hint: const Text(
                               'Select Category',
                               style: TextStyle(
@@ -717,7 +786,11 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                                 .map(
                                   (c) => DropdownMenuItem<int>(
                                     value: _asInt(c['id']),
-                                    child: Text((c['name'] as String?) ?? 'Category'),
+                                    child: Text(
+                                      (c['name'] as String?) ?? 'Category',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 )
                                 .toList(),
@@ -737,6 +810,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                           if (!_isReporterScopedRole && !_isEditMode) ...[
                             DropdownButtonFormField<int>(
                               initialValue: _reportedBy,
+                              isExpanded: true,
                               hint: const Text(
                                 'Select Reporter',
                                 style: TextStyle(
@@ -745,19 +819,35 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                                 ),
                               ),
                               items: _reporters
-                                  .map(
-                                    (r) => DropdownMenuItem<int>(
-                                      value: _asInt(r['id']),
-                                      child: Text((r['name'] as String?) ?? 'User'),
-                                    ),
-                                  )
+                                  .map((r) {
+                                    final id = _asInt(r['id']);
+                                    final name = (r['name'] as String?)?.trim();
+                                    if (id == null || name == null || name.isEmpty) {
+                                      return null;
+                                    }
+                                    return DropdownMenuItem<int>(
+                                      value: id,
+                                      child: Text(
+                                        name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    );
+                                  })
+                                  .whereType<DropdownMenuItem<int>>()
                                   .toList(),
-                              onChanged: (v) => setState(() => _reportedBy = v),
+                              onChanged: (v) => setState(() {
+                                _reportedBy = v;
+                                if (_error == 'Please select a reporter.') {
+                                  _error = null;
+                                }
+                              }),
                               decoration: _decor('Reporter', Icons.person_outline),
                             ),
                             const SizedBox(height: 14),
                             DropdownButtonFormField<int>(
                               initialValue: _assignedTo,
+                              isExpanded: true,
                               hint: const Text(
                                 'Assign Technician (Optional)',
                                 style: TextStyle(
@@ -773,7 +863,11 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                                 ..._technicians.map(
                                   (t) => DropdownMenuItem<int>(
                                     value: _asInt(t['id']),
-                                    child: Text((t['name'] as String?) ?? 'Technician'),
+                                    child: Text(
+                                      (t['name'] as String?) ?? 'Technician',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ),
                               ],

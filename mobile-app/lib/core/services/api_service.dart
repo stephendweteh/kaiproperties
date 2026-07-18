@@ -175,7 +175,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getReporters() async {
-    final res = await dio.get('/references/reporters');
+    final res = await _getWithApiV1Fallback('/references/reporters');
     return (res.data as Map<String, dynamic>)['data'] as List<dynamic>;
   }
 

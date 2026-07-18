@@ -31,6 +31,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('/references/properties', [ReferenceController::class, 'properties']);
         Route::get('/references/categories', [ReferenceController::class, 'categories']);
         Route::get('/references/technicians', [ReferenceController::class, 'technicians']);
+        Route::get('/references/reporters', [ReferenceController::class, 'reporters']);
 
         Route::get('/tickets', [TicketController::class, 'index']);
         Route::post('/tickets', [TicketController::class, 'store']);
