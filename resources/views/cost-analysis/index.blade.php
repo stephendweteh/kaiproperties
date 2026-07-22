@@ -516,12 +516,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const ctx = document.getElementById('costBreakdownChart');
             if (ctx) {
-                const chartData = @json($costBreakdown->map(fn($item) => [
-                    'label' => $item['category'],
-                    'value' => $item['percentage'],
-                    'color' => $item['color'],
-                    'amount' => $item['amount']
-                ])->values());
+                const chartData = @json($chartData ?? []);
 
                 const labels = chartData.map(item => item.label);
                 const data = chartData.map(item => item.value);

@@ -86,6 +86,16 @@ class CostAnalysisController extends Controller
             'utilization_change' => 4.3,
         ];
 
+        // Prepare chart data for Chart.js
+        $chartData = $costBreakdown->map(function ($item) {
+            return [
+                'label' => $item['category'],
+                'value' => $item['percentage'],
+                'color' => $item['color'],
+                'amount' => $item['amount']
+            ];
+        })->values();
+
         return view('cost-analysis.index', [
             'totalBudget' => $totalBudget,
             'totalCost' => $totalCost,
@@ -94,6 +104,7 @@ class CostAnalysisController extends Controller
             'lastMonthData' => $lastMonthData,
             'projects' => $projects,
             'costBreakdown' => $costBreakdown,
+            'chartData' => $chartData,
         ]);
     }
 
