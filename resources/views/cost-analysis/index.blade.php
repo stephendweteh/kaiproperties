@@ -411,30 +411,7 @@
                 <div class="card-section">
                     <div class="section-title">Cost Breakdown</div>
                     <div class="pie-chart-container">
-                        <svg class="pie-chart-svg" viewBox="0 0 100 100">
-                            @php
-                                $angleOffset = 0;
-                            @endphp
-                            @foreach($costBreakdown as $item)
-                                @php
-                                    $sliceAngle = ($item['percentage'] / 100) * 360;
-                                    $startAngle = $angleOffset;
-                                    $endAngle = $angleOffset + $sliceAngle;
-                                    $startRad = deg2rad($startAngle);
-                                    $endRad = deg2rad($endAngle);
-                                    
-                                    $x1 = 50 + 40 * cos($startRad);
-                                    $y1 = 50 + 40 * sin($startRad);
-                                    $x2 = 50 + 40 * cos($endRad);
-                                    $y2 = 50 + 40 * sin($endRad);
-                                    
-                                    $largeArc = $sliceAngle > 180 ? 1 : 0;
-                                    $color = $item['color'] ?? '#8b5cf6';
-                                    $angleOffset = $endAngle;
-                                @endphp
-                                <path d="M 50 50 L {{ $x1 }} {{ $y1 }} A 40 40 0 {{ $largeArc }} 1 {{ $x2 }} {{ $y2 }} Z" fill="{{ $color }}" stroke="white" stroke-width="2"/>
-                            @endforeach
-                        </svg>
+                        <canvas id="costBreakdownChart" style="max-width: 250px; max-height: 250px;"></canvas>
                     </div>
                     <div class="chart-legend">
                         @foreach($costBreakdown as $item)
@@ -533,4 +510,55 @@
             @endif
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('costBreakdownChart');
+            if (ctx) {
+                const chartData = @json($costBreakdown->map(fn($item) => [
+                    'label' => $item['category'],
+                    'value' => $item['percentage'],
+                    'color' => $item['color'],
+                    'amount' => $item['amount']
+                ])->values());
+
+                const labels = chartData.map(item => item.label);
+                const data = chartData.map(item => item.value);
+                const colors = chartData.map(item => item.color);
+
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors,
+                            borderColor: '#ffffff',
+                            borderWidth: 2,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        return `${label}: ${value.toFixed(1)}%`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
 @endsection
