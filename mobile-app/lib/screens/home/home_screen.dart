@@ -36,7 +36,7 @@ class HomeScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Hello, ${user?.name.split(' ').first ?? 'User'} 👋',
+                              'Hello, ${user?.name.split(' ').first ?? 'User'}',
                               style: const TextStyle(
                                 color: AppColors.textPrimary,
                                 fontSize: 24,
@@ -58,10 +58,19 @@ class HomeScreen extends StatelessWidget {
                         child: CircleAvatar(
                           radius: 22,
                           backgroundColor: AppColors.primary,
-                          child: _buildAvatarContent(
-                            user?.name,
-                            user?.profilePhotoUrl,
-                          ),
+                          backgroundImage: user?.profilePhotoUrl != null
+                              ? NetworkImage(user!.profilePhotoUrl!)
+                              : null,
+                          child: user?.profilePhotoUrl == null
+                              ? Text(
+                                  (user?.name.isNotEmpty == true
+                                      ? user!.name[0].toUpperCase()
+                                      : 'U'),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold),
+                                )
+                              : null,
                         ),
                       ),
                     ],
@@ -79,11 +88,11 @@ class HomeScreen extends StatelessWidget {
                           height: 120,
                           padding: const EdgeInsets.all(2),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
+                            color: Colors.white.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.3),
+                                color: AppColors.primary.withOpacity(0.3),
                                 blurRadius: 16,
                                 spreadRadius: 2,
                                 offset: const Offset(0, 4),
@@ -118,33 +127,43 @@ class HomeScreen extends StatelessWidget {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        _NavCard(
-                          title: 'My Dashboard',
-                          subtitle: 'View metrics, stats and recent activity',
-                          icon: Icons.dashboard_outlined,
-                          color: AppColors.primary,
-                          onTap: () => context.go('/dashboard'),
-                        ),
-                        const SizedBox(height: 16),
-                        _NavCard(
-                          title: 'My Tasks',
-                          subtitle: 'View, track and update maintenance tasks',
-                          icon: Icons.checklist_outlined,
-                          color: AppColors.accent,
-                          onTap: () => context.go('/tasks'),
-                        ),
-                        const SizedBox(height: 16),
-                        if (user?.canCreateTickets ?? false)
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
                           _NavCard(
-                            title: 'Log New Task',
-                            subtitle: 'Report a new maintenance issue',
-                            icon: Icons.add_circle_outline,
-                            color: AppColors.statusCompleted,
-                            onTap: () => context.go('/tasks/create'),
+                            title: 'My Dashboard',
+                            subtitle: 'View metrics, stats and recent activity',
+                            icon: Icons.dashboard_outlined,
+                            color: AppColors.primary,
+                            onTap: () => context.go('/dashboard'),
                           ),
-                      ],
+                          const SizedBox(height: 16),
+                          _NavCard(
+                            title: 'My Tasks',
+                            subtitle: 'View, track and update maintenance tasks',
+                            icon: Icons.checklist_outlined,
+                            color: AppColors.accent,
+                            onTap: () => context.go('/tasks'),
+                          ),
+                          const SizedBox(height: 16),
+                          _NavCard(
+                            title: 'Cost Analysis',
+                            subtitle: 'Analyze and generate financial reports',
+                            icon: Icons.analytics_outlined,
+                            color: const Color(0xFF7C3AED),
+                            onTap: () => context.go('/cost-analysis'),
+                          ),
+                          const SizedBox(height: 16),
+                          if (user?.canCreateTickets ?? false)
+                            _NavCard(
+                              title: 'Log New Task',
+                              subtitle: 'Report a new maintenance issue',
+                              icon: Icons.add_circle_outline,
+                              color: AppColors.statusCompleted,
+                              onTap: () => context.go('/tasks/create'),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -153,30 +172,6 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildAvatarContent(String? name, String? profilePhotoUrl) {
-    final fallback = Text(
-      (name?.isNotEmpty == true ? name![0] : 'U').toUpperCase(),
-      style: const TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-
-    if (profilePhotoUrl == null || profilePhotoUrl.trim().isEmpty) {
-      return fallback;
-    }
-
-    return ClipOval(
-      child: Image.network(
-        profilePhotoUrl,
-        width: 44,
-        height: 44,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => fallback,
       ),
     );
   }
@@ -260,7 +255,7 @@ class _NavCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.3),
+              color: color.withOpacity(0.3),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -272,7 +267,7 @@ class _NavCard extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(icon, color: Colors.white, size: 28),

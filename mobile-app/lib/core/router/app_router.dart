@@ -11,6 +11,7 @@ import '../../screens/tasks/my_task_screen.dart';
 import '../../screens/tasks/task_detail_screen.dart';
 import '../../screens/tasks/task_create_screen.dart';
 import '../../screens/tasks/task_success_screen.dart';
+import '../../screens/cost_analysis/cost_analysis_screen.dart';
 
 GoRouter createAppRouter(AuthProvider auth) {
   return GoRouter(
@@ -43,6 +44,7 @@ GoRouter createAppRouter(AuthProvider auth) {
       GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
       GoRoute(path: '/dashboard', builder: (_, _) => const DashboardScreen()),
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+      GoRoute(path: '/cost-analysis', builder: (_, _) => const CostAnalysisScreen()),
       GoRoute(
         path: '/tasks',
         builder: (_, state) => MyTaskScreen.withStatus(

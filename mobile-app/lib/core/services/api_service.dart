@@ -157,6 +157,11 @@ class ApiService {
     return res.data as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> getCostAnalysis() async {
+    final res = await dio.get('/cost-analysis');
+    return res.data as Map<String, dynamic>;
+  }
+
   // ─── References ────────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getProperties() async {
@@ -175,7 +180,7 @@ class ApiService {
   }
 
   Future<List<dynamic>> getReporters() async {
-    final res = await _getWithApiV1Fallback('/references/reporters');
+    final res = await dio.get('/references/reporters');
     return (res.data as Map<String, dynamic>)['data'] as List<dynamic>;
   }
 
@@ -336,9 +341,5 @@ class ApiService {
           'device_name': deviceName,
       },
     );
-  }
-
-  Future<void> unregisterDeviceToken(String token) async {
-    await dio.delete('/device-tokens/${Uri.encodeComponent(token)}');
   }
 }

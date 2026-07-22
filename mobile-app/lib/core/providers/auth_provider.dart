@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
-import '../services/push_notification_service.dart';
 import '../services/storage_service.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
@@ -30,7 +29,6 @@ class AuthProvider extends ChangeNotifier {
       final data = await ApiService.instance.getMe();
       _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
       _status = AuthStatus.authenticated;
-      await PushNotificationService.instance.syncDeviceToken();
     } catch (_) {
       await StorageService.instance.clear();
       _status = AuthStatus.unauthenticated;
@@ -49,7 +47,6 @@ class AuthProvider extends ChangeNotifier {
       _user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
       await StorageService.instance.saveUser(_user!.toJson());
       _status = AuthStatus.authenticated;
-      await PushNotificationService.instance.syncDeviceToken();
       _loading = false;
       notifyListeners();
       return true;
@@ -86,7 +83,6 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     try {
-      await PushNotificationService.instance.unregisterDeviceToken();
       await ApiService.instance.logout();
     } catch (_) {}
     await StorageService.instance.clear();

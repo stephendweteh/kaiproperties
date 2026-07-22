@@ -66,8 +66,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
 
   int? _asInt(dynamic value) {
     if (value is int) return value;
-    if (value is num) return value.toInt();
-    if (value is String) return int.tryParse(value.trim());
+    if (value is String) return int.tryParse(value);
     return null;
   }
 
@@ -271,13 +270,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
           .toList();
       _reporters = reporters
           .cast<Map<String, dynamic>>()
-          .map((r) {
-            final id = _asInt(r['id']);
-            final name = (r['name'] as String?)?.trim();
-            if (id == null || name == null || name.isEmpty) return null;
-            return {'id': id, 'name': name};
-          })
-          .whereType<Map<String, dynamic>>()
+          .where((r) => r['id'] != null && r['name'] != null)
           .toList();
 
       if (_reporters.isNotEmpty) {
@@ -443,45 +436,8 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
     }
   }
 
-  Future<int?> _resolveReportedByForSubmit() async {
-    if (_isReporterScopedRole || _isEditMode) return null;
-
-    final validReporterIds = _reporters
-        .map((r) => _asInt(r['id']))
-        .whereType<int>()
-        .toSet();
-
-    if (_reportedBy != null && validReporterIds.contains(_reportedBy)) {
-      return _reportedBy;
-    }
-
-    if (validReporterIds.isNotEmpty) {
-      return validReporterIds.first;
-    }
-
-    final currentUser = context.read<AuthProvider>().user;
-    if (currentUser?.id != null) {
-      return currentUser!.id;
-    }
-
-    try {
-      final meRes = await ApiService.instance.getMe();
-      final me = meRes['user'];
-      if (me is Map<String, dynamic>) {
-        return _asInt(me['id']);
-      }
-    } catch (_) {
-      // Keep submit flow alive even if /me fails.
-    }
-
-    return null;
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
-    final ticketProvider = context.read<TicketProvider>();
-    final authProvider = context.read<AuthProvider>();
 
     if (_propertyId == null) {
       setState(() => _error = 'Please select a property.');
@@ -493,34 +449,15 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
       return;
     }
 
-    var resolvedReportedBy = await _resolveReportedByForSubmit();
-
-    // Final server-safe fallback: always inject current authenticated user as reporter.
-    if (!_isReporterScopedRole && !_isEditMode && resolvedReportedBy == null) {
-      resolvedReportedBy = authProvider.user?.id;
-    }
-
-    if (!_isReporterScopedRole && !_isEditMode && resolvedReportedBy == null) {
-      try {
-        final meRes = await ApiService.instance.getMe();
-        final me = meRes['user'];
-        if (me is Map<String, dynamic>) {
-          resolvedReportedBy = _asInt(me['id']);
-        }
-      } catch (_) {
-        // Fall through to explicit error below.
+    if (!_isReporterScopedRole && !_isEditMode && _reportedBy == null) {
+      final currentUser = context.read<AuthProvider>().user;
+      if (currentUser != null) {
+        _reportedBy = currentUser.id;
       }
     }
 
-    if (!_isReporterScopedRole && !_isEditMode) {
-      _reportedBy = resolvedReportedBy;
-    }
-
-    if (!_isReporterScopedRole && !_isEditMode && resolvedReportedBy == null) {
-      setState(() {
-        _error =
-            'Unable to resolve reporter from current account. Please sign in again and retry.';
-      });
+    if (!_isReporterScopedRole && !_isEditMode && _reportedBy == null) {
+      setState(() => _error = 'Please select a reporter.');
       return;
     }
 
@@ -554,11 +491,11 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
       'estimated_cost': estimatedCost,
       'estimated_cost_currency':
           estimatedCost == null ? null : _estimatedCostCurrency,
-      if (!_isReporterScopedRole && !_isEditMode && resolvedReportedBy != null)
-        'reported_by': resolvedReportedBy,
+      if (!_isReporterScopedRole && !_isEditMode) 'reported_by': _reportedBy,
       if (!_isEditMode) 'assigned_to': _assignedTo,
     };
 
+    final ticketProvider = context.read<TicketProvider>();
     final success = _isEditMode
         ? await ticketProvider.updateTicket(widget.ticketId!, payload)
         : await ticketProvider.createTicket(payload);
@@ -608,14 +545,8 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _titleCtrl.dispose();
-    _descCtrl.dispose();
-    _unitCtrl.dispose();
-    _estimatedCostCtrl.dispose();
-    super.dispose();
-  }
+  static const _fieldSpacing = 16.0;
+  static const _sectionSpacing = 24.0;
 
   @override
   Widget build(BuildContext context) {
@@ -630,22 +561,38 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.lock_outline, color: AppColors.error, size: 40),
-                const SizedBox(height: 12),
+                const Icon(Icons.lock_outline, color: AppColors.error, size: 48),
+                const SizedBox(height: 16),
                 const Text(
                   'You do not have permission to log a new task.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => context.go('/tasks'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 15,
+                    height: 1.5,
                   ),
-                  child: const Text(
-                    'Back to Tasks',
-                    style: TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/tasks'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Back to Tasks',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -671,7 +618,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
             child: SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
                 child: Row(
                   children: [
                     GestureDetector(
@@ -682,13 +629,16 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                         size: 20,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      _isEditMode ? 'Edit Task' : 'Log New Task',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _isEditMode ? 'Edit Task' : 'Log New Task',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.3,
+                        ),
                       ),
                     ),
                   ],
@@ -702,7 +652,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                     child: CircularProgressIndicator(color: AppColors.primary),
                   )
                 : SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -710,300 +660,49 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                           if (_error != null)
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(14),
+                              margin: const EdgeInsets.only(bottom: _sectionSpacing),
                               decoration: BoxDecoration(
-                                color: AppColors.error.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                _error!,
-                                style: const TextStyle(
-                                  color: AppColors.error,
-                                  fontSize: 13,
+                                color: AppColors.error.withValues(alpha: 0.08),
+                                border: Border.all(
+                                  color: AppColors.error.withValues(alpha: 0.3),
                                 ),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            ),
-                          _field(
-                            _titleCtrl,
-                            'Task Title',
-                            Icons.title_outlined,
-                            validator: (v) =>
-                                v!.trim().isEmpty ? 'Enter a title' : null,
-                          ),
-                          const SizedBox(height: 14),
-                          TextFormField(
-                            controller: _descCtrl,
-                            maxLines: 4,
-                            validator: (v) =>
-                                v!.trim().isEmpty ? 'Enter a description' : null,
-                            decoration: _decor(
-                              'Description',
-                              Icons.description_outlined,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          DropdownButtonFormField<int>(
-                            initialValue: _propertyId,
-                            isExpanded: true,
-                            hint: const Text(
-                              'Select Property',
-                              style: TextStyle(
-                                color: AppColors.textLight,
-                                fontSize: 14,
-                              ),
-                            ),
-                            items: _properties
-                                .map(
-                                  (p) => DropdownMenuItem<int>(
-                                    value: _asInt(p['id']),
-                                    child: Text(
-                                      (p['name'] as String?) ?? 'Property',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) => setState(() => _propertyId = v),
-                            decoration: _decor(
-                              'Property',
-                              Icons.location_on_outlined,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          DropdownButtonFormField<int>(
-                            initialValue: _categoryId,
-                            isExpanded: true,
-                            hint: const Text(
-                              'Select Category',
-                              style: TextStyle(
-                                color: AppColors.textLight,
-                                fontSize: 14,
-                              ),
-                            ),
-                            items: _categories
-                                .map(
-                                  (c) => DropdownMenuItem<int>(
-                                    value: _asInt(c['id']),
-                                    child: Text(
-                                      (c['name'] as String?) ?? 'Category',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) => setState(() => _categoryId = v),
-                            decoration: _decor(
-                              'Category',
-                              Icons.category_outlined,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          _field(
-                            _unitCtrl,
-                            'Unit / Room (Optional)',
-                            Icons.door_back_door_outlined,
-                          ),
-                          const SizedBox(height: 14),
-                          if (!_isReporterScopedRole && !_isEditMode) ...[
-                            DropdownButtonFormField<int>(
-                              initialValue: _reportedBy,
-                              isExpanded: true,
-                              hint: const Text(
-                                'Select Reporter',
-                                style: TextStyle(
-                                  color: AppColors.textLight,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              items: _reporters
-                                  .map((r) {
-                                    final id = _asInt(r['id']);
-                                    final name = (r['name'] as String?)?.trim();
-                                    if (id == null || name == null || name.isEmpty) {
-                                      return null;
-                                    }
-                                    return DropdownMenuItem<int>(
-                                      value: id,
-                                      child: Text(
-                                        name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    );
-                                  })
-                                  .whereType<DropdownMenuItem<int>>()
-                                  .toList(),
-                              onChanged: (v) => setState(() {
-                                _reportedBy = v;
-                                if (_error == 'Please select a reporter.') {
-                                  _error = null;
-                                }
-                              }),
-                              decoration: _decor('Reporter', Icons.person_outline),
-                            ),
-                            const SizedBox(height: 14),
-                            DropdownButtonFormField<int>(
-                              initialValue: _assignedTo,
-                              isExpanded: true,
-                              hint: const Text(
-                                'Assign Technician (Optional)',
-                                style: TextStyle(
-                                  color: AppColors.textLight,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              items: [
-                                const DropdownMenuItem<int>(
-                                  value: null,
-                                  child: Text('Unassigned'),
-                                ),
-                                ..._technicians.map(
-                                  (t) => DropdownMenuItem<int>(
-                                    value: _asInt(t['id']),
-                                    child: Text(
-                                      (t['name'] as String?) ?? 'Technician',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                              onChanged: (v) => setState(() => _assignedTo = v),
-                              decoration:
-                                  _decor('Assigned Technician', Icons.engineering),
-                            ),
-                            const SizedBox(height: 14),
-                          ],
-                          DropdownButtonFormField<String>(
-                            initialValue: _priority,
-                            items: ['low', 'medium', 'high', 'urgent']
-                                .map(
-                                  (p) => DropdownMenuItem(
-                                    value: p,
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.flag,
-                                          color: AppColors.priorityColor(p),
-                                          size: 16,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          p.toUpperCase(),
-                                          style: TextStyle(
-                                            color: AppColors.priorityColor(p),
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) =>
-                                setState(() => _priority = v ?? 'medium'),
-                            decoration: _decor('Priority', Icons.flag_outlined),
-                          ),
-                          const SizedBox(height: 14),
-                          InkWell(
-                            onTap: _pickEtd,
-                            borderRadius: BorderRadius.circular(12),
-                            child: InputDecorator(
-                              decoration:
-                                  _decor('Expected Completion Date & Time', Icons.event),
                               child: Row(
                                 children: [
+                                  const Icon(
+                                    Icons.error_outline,
+                                    color: AppColors.error,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      _formatEtd(_etd),
-                                      style: TextStyle(
-                                        color: _etd == null
-                                            ? AppColors.textLight
-                                            : AppColors.textPrimary,
+                                      _error!,
+                                      style: const TextStyle(
+                                        color: AppColors.error,
+                                        fontSize: 13,
+                                        height: 1.4,
                                       ),
                                     ),
                                   ),
-                                  if (_etd != null)
-                                    IconButton(
-                                      onPressed: () => setState(() => _etd = null),
-                                      icon: const Icon(
-                                        Icons.clear,
-                                        size: 18,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
                                 ],
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 14),
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: DropdownButtonFormField<String>(
-                                  initialValue: _estimatedCostCurrency,
-                                  items: _currencies
-                                      .map(
-                                        (currency) => DropdownMenuItem(
-                                          value: currency,
-                                          child: Text(currency),
-                                        ),
-                                      )
-                                      .toList(),
-                                  onChanged: (value) => setState(
-                                    () => _estimatedCostCurrency = value ?? 'GHS',
-                                  ),
-                                  decoration: _decor('Currency', Icons.currency_exchange),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                flex: 5,
-                                child: TextFormField(
-                                  controller: _estimatedCostCtrl,
-                                  keyboardType: const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                                  decoration:
-                                      _decor('Estimated Cost (Optional)', Icons.payments),
-                                ),
-                              ),
+                          _buildBasicInfoSection(),
+                          const SizedBox(height: _sectionSpacing),
+                          _buildDetailsSection(),
+                          const SizedBox(height: _sectionSpacing),
+                          if (!_isReporterScopedRole && !_isEditMode)
+                            ...[
+                              _buildAssignmentSection(),
+                              const SizedBox(height: _sectionSpacing),
                             ],
-                          ),
-                          const SizedBox(height: 18),
                           _buildAttachmentsSection(),
-                          const SizedBox(height: 28),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: _submitting ? null : _submit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: _submitting
-                                  ? const CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    )
-                                  : Text(
-                                      _isEditMode ? 'Update Task' : 'Submit Task',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                            ),
-                          ),
+                          const SizedBox(height: _sectionSpacing),
+                          _buildSubmitButton(),
+                          const SizedBox(height: 24),
                         ],
                       ),
                     ),
@@ -1014,14 +713,344 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
     );
   }
 
+  Widget _buildBasicInfoSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Basic Information',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _field(
+          _titleCtrl,
+          'Task Title',
+          Icons.title_outlined,
+          validator: (v) => v!.trim().isEmpty ? 'Enter a title' : null,
+        ),
+        const SizedBox(height: _fieldSpacing),
+        TextFormField(
+          controller: _descCtrl,
+          maxLines: 4,
+          minLines: 3,
+          validator: (v) =>
+              v!.trim().isEmpty ? 'Enter a description' : null,
+          decoration: _decor(
+            'Description',
+            Icons.description_outlined,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Task Details',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 14),
+        DropdownButtonFormField<int>(
+          initialValue: _propertyId,
+          hint: const Text(
+            'Select Property',
+            style: TextStyle(
+              color: AppColors.textLight,
+              fontSize: 14,
+            ),
+          ),
+          items: _properties
+              .map(
+                (p) => DropdownMenuItem<int>(
+                  value: _asInt(p['id']),
+                  child: Text((p['name'] as String?) ?? 'Property'),
+                ),
+              )
+              .toList(),
+          onChanged: (v) => setState(() => _propertyId = v),
+          decoration: _decor(
+            'Property',
+            Icons.location_on_outlined,
+          ),
+        ),
+        const SizedBox(height: _fieldSpacing),
+        DropdownButtonFormField<int>(
+          initialValue: _categoryId,
+          hint: const Text(
+            'Select Category',
+            style: TextStyle(
+              color: AppColors.textLight,
+              fontSize: 14,
+            ),
+          ),
+          items: _categories
+              .map(
+                (c) => DropdownMenuItem<int>(
+                  value: _asInt(c['id']),
+                  child: Text((c['name'] as String?) ?? 'Category'),
+                ),
+              )
+              .toList(),
+          onChanged: (v) => setState(() => _categoryId = v),
+          decoration: _decor(
+            'Category',
+            Icons.category_outlined,
+          ),
+        ),
+        const SizedBox(height: _fieldSpacing),
+        _field(
+          _unitCtrl,
+          'Unit / Room',
+          Icons.door_back_door_outlined,
+        ),
+        const SizedBox(height: _fieldSpacing),
+        DropdownButtonFormField<String>(
+          initialValue: _priority,
+          items: ['low', 'medium', 'high', 'urgent']
+              .map(
+                (p) => DropdownMenuItem(
+                  value: p,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.flag,
+                        color: AppColors.priorityColor(p),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        p.toUpperCase(),
+                        style: TextStyle(
+                          color: AppColors.priorityColor(p),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (v) =>
+              setState(() => _priority = v ?? 'medium'),
+          decoration: _decor('Priority', Icons.flag_outlined),
+        ),
+        const SizedBox(height: _fieldSpacing),
+        InkWell(
+          onTap: _pickEtd,
+          borderRadius: BorderRadius.circular(12),
+          child: InputDecorator(
+            decoration:
+                _decor('Expected Completion Date & Time', Icons.event),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _formatEtd(_etd),
+                    style: TextStyle(
+                      color: _etd == null
+                          ? AppColors.textLight
+                          : AppColors.textPrimary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                if (_etd != null)
+                  IconButton(
+                    onPressed: () => setState(() => _etd = null),
+                    icon: const Icon(
+                      Icons.close,
+                      size: 18,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: _fieldSpacing),
+        _buildCostField(),
+      ],
+    );
+  }
+
+  Widget _buildAssignmentSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Assignment',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 14),
+        DropdownButtonFormField<int>(
+          initialValue: _reportedBy,
+          hint: const Text(
+            'Select Reporter',
+            style: TextStyle(
+              color: AppColors.textLight,
+              fontSize: 14,
+            ),
+          ),
+          items: _reporters
+              .map(
+                (r) => DropdownMenuItem<int>(
+                  value: _asInt(r['id']),
+                  child: Text((r['name'] as String?) ?? 'User'),
+                ),
+              )
+              .toList(),
+          onChanged: (v) => setState(() => _reportedBy = v),
+          decoration: _decor('Reporter', Icons.person_outline),
+        ),
+        const SizedBox(height: _fieldSpacing),
+        DropdownButtonFormField<int>(
+          initialValue: _assignedTo,
+          hint: const Text(
+            'Assign Technician (Optional)',
+            style: TextStyle(
+              color: AppColors.textLight,
+              fontSize: 14,
+            ),
+          ),
+          items: [
+            const DropdownMenuItem<int>(
+              value: null,
+              child: Text('Unassigned'),
+            ),
+            ..._technicians.map(
+              (t) => DropdownMenuItem<int>(
+                value: _asInt(t['id']),
+                child: Text((t['name'] as String?) ?? 'Technician'),
+              ),
+            ),
+          ],
+          onChanged: (v) => setState(() => _assignedTo = v),
+          decoration:
+              _decor('Assigned Technician', Icons.engineering),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCostField() {
+    return Row(
+      children: [
+        SizedBox(
+          width: 100,
+          child: DropdownButtonFormField<String>(
+            initialValue: _estimatedCostCurrency,
+            items: _currencies
+                .map(
+                  (currency) => DropdownMenuItem(
+                    value: currency,
+                    child: Text(
+                      currency,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) => setState(
+              () => _estimatedCostCurrency = value ?? 'GHS',
+            ),
+            decoration: _decor('', Icons.currency_exchange),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: TextFormField(
+            controller: _estimatedCostCtrl,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+            ),
+            decoration:
+                _decor('Estimated Cost (Optional)', Icons.payments),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: _submitting ? null : _submit,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          disabledBackgroundColor: AppColors.primary
+              .withValues(alpha: 0.6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 2,
+        ),
+        child: _submitting
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : Text(
+                _isEditMode ? 'Update Task' : 'Submit Task',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    _unitCtrl.dispose();
+    _estimatedCostCtrl.dispose();
+    super.dispose();
+  }
+
   Widget _buildAttachmentsSection() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: AppColors.divider, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1032,56 +1061,100 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
               color: AppColors.textPrimary,
               fontSize: 15,
               fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             children: [
-              OutlinedButton.icon(
-                onPressed: _pickGalleryImages,
-                icon: const Icon(Icons.image_outlined, size: 16),
-                label: const Text('Upload Pictures'),
+              SizedBox(
+                height: 36,
+                child: OutlinedButton.icon(
+                  onPressed: _pickGalleryImages,
+                  icon: const Icon(Icons.image_outlined, size: 18),
+                  label: const Text('Pictures'),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                ),
               ),
-              OutlinedButton.icon(
-                onPressed: _pickCameraImage,
-                icon: const Icon(Icons.photo_camera_outlined, size: 16),
-                label: const Text('Take Picture'),
+              SizedBox(
+                height: 36,
+                child: OutlinedButton.icon(
+                  onPressed: _pickCameraImage,
+                  icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                  label: const Text('Camera'),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                ),
               ),
-              OutlinedButton.icon(
-                onPressed: _pickDocuments,
-                icon: const Icon(Icons.attach_file_outlined, size: 16),
-                label: const Text('Upload Documents'),
+              SizedBox(
+                height: 36,
+                child: OutlinedButton.icon(
+                  onPressed: _pickDocuments,
+                  icon: const Icon(Icons.attach_file_outlined, size: 18),
+                  label: const Text('Documents'),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           if (_imageAttachmentPaths.isNotEmpty)
-            _buildPathList('Pictures', _imageAttachmentPaths, (idx) {
+            _buildAttachmentGroup('Pictures', _imageAttachmentPaths, (idx) {
               setState(() => _imageAttachmentPaths.removeAt(idx));
             }),
-          if (_cameraAttachmentPath != null)
-            _buildPathList('Camera', [_cameraAttachmentPath!], (idx) {
+          if (_cameraAttachmentPath != null) ...[
+            if (_imageAttachmentPaths.isNotEmpty) const SizedBox(height: 10),
+            _buildAttachmentGroup('Camera', [_cameraAttachmentPath!], (idx) {
               setState(() => _cameraAttachmentPath = null);
             }),
-          if (_documentAttachmentPaths.isNotEmpty)
-            _buildPathList('Documents', _documentAttachmentPaths, (idx) {
+          ],
+          if (_documentAttachmentPaths.isNotEmpty) ...[
+            if (_imageAttachmentPaths.isNotEmpty ||
+                _cameraAttachmentPath != null)
+              const SizedBox(height: 10),
+            _buildAttachmentGroup('Documents', _documentAttachmentPaths, (idx) {
               setState(() => _documentAttachmentPaths.removeAt(idx));
             }),
+          ],
           if (_imageAttachmentPaths.isEmpty &&
               _cameraAttachmentPath == null &&
               _documentAttachmentPaths.isEmpty)
-            const Text(
-              'No files selected.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'No files selected',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildPathList(
+  Widget _buildAttachmentGroup(
     String label,
     List<String> paths,
     void Function(int) onRemove,
@@ -1095,39 +1168,62 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
             color: AppColors.textSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         ...paths.asMap().entries.map(
           (entry) {
             final index = entry.key;
             final fileName = entry.value.split(RegExp(r'[\\/]')).last;
             return Container(
               margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.divider.withValues(alpha: 0.5),
+                ),
               ),
               child: Row(
                 children: [
+                  Icon(
+                    _getFileIcon(fileName),
+                    size: 18,
+                    color: AppColors.primary.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      fileName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 12,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          fileName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => onRemove(index),
-                    icon: const Icon(
-                      Icons.close,
-                      size: 16,
-                      color: AppColors.error,
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: IconButton(
+                      onPressed: () => onRemove(index),
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(
+                        Icons.close,
+                        size: 16,
+                        color: AppColors.error,
+                      ),
+                      tooltip: 'Remove',
                     ),
                   ),
                 ],
@@ -1137,6 +1233,15 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
         ),
       ],
     );
+  }
+
+  IconData _getFileIcon(String fileName) {
+    if (fileName.endsWith('.pdf')) return Icons.picture_as_pdf;
+    if (fileName.endsWith('.doc') || fileName.endsWith('.docx'))
+      return Icons.description;
+    if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx'))
+      return Icons.table_chart;
+    return Icons.insert_drive_file;
   }
 
   Widget _field(

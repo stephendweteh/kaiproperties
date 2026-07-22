@@ -5,9 +5,9 @@ import 'core/constants/app_colors.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/ticket_provider.dart';
 import 'core/providers/dashboard_provider.dart';
+import 'core/providers/cost_analysis_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/api_service.dart';
-import 'core/services/push_notification_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +25,7 @@ class _KaiPropertiesAppState extends State<KaiPropertiesApp> {
   late final AuthProvider _authProvider;
   late final TicketProvider _ticketProvider;
   late final DashboardProvider _dashboardProvider;
+  late final CostAnalysisProvider _costAnalysisProvider;
   late final GoRouter _router;
 
   @override
@@ -33,6 +34,7 @@ class _KaiPropertiesAppState extends State<KaiPropertiesApp> {
     _authProvider = AuthProvider();
     _ticketProvider = TicketProvider();
     _dashboardProvider = DashboardProvider();
+    _costAnalysisProvider = CostAnalysisProvider(ApiService.instance);
     _router = createAppRouter(_authProvider);
 
     // Wire the API service once with router/auth-aware unauthorized handling.
@@ -44,23 +46,6 @@ class _KaiPropertiesAppState extends State<KaiPropertiesApp> {
         });
       },
     );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await PushNotificationService.instance.initialize(
-        onNotificationTap: (ticketId) async {
-          if (ticketId == null) {
-            _router.go('/tasks');
-            return;
-          }
-
-          _router.go('/tasks/$ticketId');
-        },
-      );
-
-      if (_authProvider.isAuthenticated) {
-        await PushNotificationService.instance.syncDeviceToken();
-      }
-    });
   }
 
   @override
@@ -68,6 +53,7 @@ class _KaiPropertiesAppState extends State<KaiPropertiesApp> {
     _authProvider.dispose();
     _ticketProvider.dispose();
     _dashboardProvider.dispose();
+    _costAnalysisProvider.dispose();
     super.dispose();
   }
 
@@ -78,6 +64,7 @@ class _KaiPropertiesAppState extends State<KaiPropertiesApp> {
         ChangeNotifierProvider<AuthProvider>.value(value: _authProvider),
         ChangeNotifierProvider<TicketProvider>.value(value: _ticketProvider),
         ChangeNotifierProvider<DashboardProvider>.value(value: _dashboardProvider),
+        ChangeNotifierProvider<CostAnalysisProvider>.value(value: _costAnalysisProvider),
       ],
       child: MaterialApp.router(
         title: 'KAI Properties',
