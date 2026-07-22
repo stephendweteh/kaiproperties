@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ReferenceController;
 use App\Http\Controllers\Api\TicketController;
 use App\Http\Controllers\Api\Mobile\AppConfigController;
 use App\Http\Controllers\Api\Mobile\AuthController as MobileAuthController;
+use App\Http\Controllers\Api\Mobile\CostAnalysisController as MobileCostAnalysisController;
 use App\Http\Controllers\Api\Mobile\DashboardController as MobileDashboardController;
 use App\Http\Controllers\Api\Mobile\DeviceTokenController;
 use App\Http\Controllers\Api\Mobile\ProfileController;
@@ -78,6 +79,9 @@ Route::prefix('mobile/v1')->name('mobile.v1.')->group(function (): void {
 
         // Dashboard
         Route::get('/dashboard', [MobileDashboardController::class, 'index'])->name('dashboard');
+
+        // Cost Analysis
+        Route::get('/cost-analysis', [MobileCostAnalysisController::class, 'index'])->name('cost-analysis');
 
         // References (shared)
         Route::get('/references/properties', [ReferenceController::class, 'properties'])->name('references.properties');

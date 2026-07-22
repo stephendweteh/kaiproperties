@@ -56,6 +56,15 @@
                         <span>Tickets</span>
                     </span>
                 </a>
+                <a class="{{ request()->routeIs('cost-analysis') ? 'active' : '' }}" href="{{ route('cost-analysis') }}">
+                    <span class="nav-link-inner">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M3 3v18h18"></path>
+                            <path d="M18 17V9m-5 8v-3m-5 3v-8m-3 8v-5"></path>
+                        </svg>
+                        <span>Cost Analysis</span>
+                    </span>
+                </a>
                 @if(auth()->user()->hasRole([
                     \App\Models\User::ROLE_ADMIN,
                     \App\Models\User::ROLE_OPERATIONS_MANAGER,

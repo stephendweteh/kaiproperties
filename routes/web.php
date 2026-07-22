@@ -6,6 +6,7 @@ use App\Http\Controllers\Web\Admin\PropertyController as AdminPropertyController
 use App\Http\Controllers\Web\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Web\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Web\AuthController;
+use App\Http\Controllers\Web\CostAnalysisController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\PwaController;
 use App\Http\Controllers\Web\PushController;
@@ -48,6 +49,8 @@ Route::middleware('auth')->group(function (): void {
 	Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 	Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+	Route::get('/cost-analysis', [CostAnalysisController::class, 'index'])->name('cost-analysis');
+	Route::get('/cost-analysis/export', [CostAnalysisController::class, 'export'])->name('cost-analysis.export');
 
 	Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
 	Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
