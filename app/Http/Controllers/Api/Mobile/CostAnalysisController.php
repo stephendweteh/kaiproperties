@@ -64,7 +64,7 @@ class CostAnalysisController extends Controller
         })->values()->toArray();
 
         // Cost breakdown by category
-        $costBreakdown = $tickets->groupBy('maintenance_category_id')->map(function ($categoryTickets) {
+        $costBreakdown = $tickets->groupBy('maintenance_category_id')->map(function ($categoryTickets) use ($totalBudget) {
             $amount = $categoryTickets->sum(fn ($t) => $this->convertCostToGHS($t->estimated_cost, $t->estimated_cost_currency));
             return [
                 'category' => $categoryTickets->first()?->category?->name ?? 'Other',
