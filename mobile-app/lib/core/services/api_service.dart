@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../constants/app_constants.dart';
@@ -7,15 +8,40 @@ class ApiService {
   ApiService._();
   static final ApiService instance = ApiService._();
 
+  static bool shouldRetryWithFallback(DioException error) {
+    if (error.type != DioExceptionType.connectionError &&
+        error.type != DioExceptionType.unknown) {
+      return false;
+    }
+
+    final rawError = error.error;
+    if (rawError is SocketException) {
+      final message = rawError.toString();
+      return message.contains('Failed host lookup') ||
+          message.contains('No address associated with hostname');
+    }
+
+    if (rawError is String) {
+      return rawError.contains('Failed host lookup') ||
+          rawError.contains('No address associated with hostname');
+    }
+
+    return false;
+  }
+
   void Function()? _onUnauthorized;
   late final Dio _dio;
 
   /// Call once at app startup (in main.dart) before any requests.
   void init({required void Function() onUnauthorized}) {
     _onUnauthorized = onUnauthorized;
+    final normalizedBaseUrl = kBaseUrl.endsWith('/')
+        ? kBaseUrl.substring(0, kBaseUrl.length - 1)
+        : kBaseUrl;
+
     _dio = Dio(
       BaseOptions(
-        baseUrl: kBaseUrl,
+        baseUrl: normalizedBaseUrl,
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(seconds: 30),
         headers: {
@@ -25,6 +51,41 @@ class ApiService {
       ),
     );
     _dio.interceptors.add(AuthInterceptor(onUnauthorized: onUnauthorized));
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onError: (error, handler) async {
+          if (ApiService.shouldRetryWithFallback(error)) {
+            debugPrint('DNS lookup failed for API host. Retrying with live host override.');
+            final fallbackUrl = kFallbackApiBaseUrl;
+            final currentHost = Uri.parse(kBaseUrl).host;
+            final fallbackHeaders = {
+              ...error.requestOptions.headers,
+              'Host': currentHost,
+              'X-Original-Host': kApiHostHeader,
+            };
+            if (error.requestOptions.baseUrl != fallbackUrl) {
+              final fallbackRequestOptions = RequestOptions(
+                path: error.requestOptions.path,
+                method: error.requestOptions.method,
+                headers: fallbackHeaders,
+                data: error.requestOptions.data,
+                queryParameters: error.requestOptions.queryParameters,
+                baseUrl: fallbackUrl,
+              );
+              try {
+                final response = await _dio.fetch<dynamic>(
+                  fallbackRequestOptions,
+                );
+                return handler.resolve(response);
+              } catch (_) {
+                return handler.next(error);
+              }
+            }
+          }
+          return handler.next(error);
+        },
+      ),
+    );
     if (kDebugMode) {
       _dio.interceptors.add(
         LogInterceptor(
