@@ -1,10 +1,14 @@
 class DashboardModel {
   final DashboardMetrics metrics;
+  final Map<String, String> metricLabels;
+  final Map<String, String> statusLabels;
   final Map<String, int> byStatus;
   final List<RecentTicket> recentTickets;
 
   const DashboardModel({
     required this.metrics,
+    required this.metricLabels,
+    required this.statusLabels,
     required this.byStatus,
     required this.recentTickets,
   });
@@ -12,6 +16,10 @@ class DashboardModel {
   factory DashboardModel.fromJson(Map<String, dynamic> json) => DashboardModel(
         metrics: DashboardMetrics.fromJson(
             json['metrics'] as Map<String, dynamic>),
+        metricLabels: (json['metric_labels'] as Map<String, dynamic>? ?? {})
+            .map((k, v) => MapEntry(k, v.toString())),
+        statusLabels: (json['status_labels'] as Map<String, dynamic>? ?? {})
+            .map((k, v) => MapEntry(k, v.toString())),
         byStatus: (json['by_status'] as Map<String, dynamic>? ?? {})
             .map((k, v) => MapEntry(k, (v as num).toInt())),
         recentTickets: (json['recent_tickets'] as List<dynamic>? ?? [])

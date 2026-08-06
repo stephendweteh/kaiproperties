@@ -69,6 +69,25 @@ class DashboardController extends Controller
 
         return response()->json([
             'metrics'        => $metrics,
+            'metric_labels'   => [
+                'total' => 'Total Tasks',
+                'new' => 'New',
+                'in_progress' => 'In Progress',
+                'overdue' => 'Overdue',
+                'completed' => 'Completed',
+                'closed' => 'Closed',
+            ],
+            'status_labels'   => [
+                'logged' => 'Logged/New',
+                'assigned' => 'Assigned',
+                'in_progress' => 'In Progress',
+                'pending_approval' => 'Pending Approval',
+                'on_hold' => 'On Hold',
+                'completed' => 'Completed',
+                'closed' => 'Closed',
+                'rejected' => 'Rejected',
+                'overdue' => 'Overdue',
+            ],
             'by_status'      => $byStatus,
             'recent_tickets' => $recentTickets,
         ]);

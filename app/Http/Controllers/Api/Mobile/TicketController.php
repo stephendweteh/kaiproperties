@@ -78,7 +78,20 @@ class TicketController extends Controller
 
         $query = Ticket::query()
             ->with(['property:id,name,code', 'category:id,name', 'reporter:id,name', 'technician:id,name'])
-            ->when($request->filled('status'), fn (Builder $b) => $b->where('status', $request->string('status')))
+            ->when($request->filled('status'), function (Builder $b) use ($request): void {
+                $status = $request->string('status')->toString();
+
+                if ($status === 'overdue') {
+                    $b
+                        ->whereNotIn('status', ['completed', 'closed', 'rejected'])
+                        ->whereNotNull('etd')
+                        ->where('etd', '<', now());
+
+                    return;
+                }
+
+                $b->where('status', $status);
+            })
             ->when($request->filled('priority'), fn (Builder $b) => $b->where('priority', $request->string('priority')))
             ->when($request->filled('property_id'), fn (Builder $b) => $b->where('property_id', $request->integer('property_id')))
             ->when($request->filled('maintenance_category_id'), fn (Builder $b) => $b->where('maintenance_category_id', $request->integer('maintenance_category_id')))

@@ -47,7 +47,20 @@ class TicketController extends Controller
             ->when($isTechnician, fn (Builder $builder) => $builder
                 ->where('assigned_to', $request->user()->id)
                 ->whereIn('status', $this->technicianVisibleStatuses()))
-            ->when($request->filled('status'), fn (Builder $builder) => $builder->where('status', $request->string('status')))
+            ->when($request->filled('status'), function (Builder $builder) use ($request): void {
+                $status = $request->string('status')->toString();
+
+                if ($status === 'overdue') {
+                    $builder
+                        ->whereNotIn('status', ['completed', 'closed', 'rejected'])
+                        ->whereNotNull('etd')
+                        ->where('etd', '<', now());
+
+                    return;
+                }
+
+                $builder->where('status', $status);
+            })
             ->when($request->filled('customer_id'), function (Builder $builder) use ($request): void {
                 $builder->whereHas('property', fn (Builder $inner) => $inner->where('customer_id', $request->integer('customer_id')));
             })

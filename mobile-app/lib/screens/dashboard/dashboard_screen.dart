@@ -117,42 +117,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
             childAspectRatio: 1.5,
             children: [
               _StatCard(
-                'Total Tasks',
+                data.metricLabels['total'] ?? 'Total Tasks',
                 m.total,
                 Icons.assignment_outlined,
                 AppColors.primary,
                 onTap: () => context.go('/tasks'),
               ),
               _StatCard(
-                'In Progress',
+                data.metricLabels['in_progress'] ?? 'In Progress',
                 m.inProgress,
                 Icons.pending_actions,
                 AppColors.statusInProgress,
                 onTap: () => context.go('/tasks?status=in_progress'),
               ),
               _StatCard(
-                'Completed',
+                data.metricLabels['completed'] ?? 'Completed',
                 m.completed,
                 Icons.check_circle_outline,
                 AppColors.statusCompleted,
                 onTap: () => context.go('/tasks?status=completed'),
               ),
               _StatCard(
-                'Overdue',
+                data.metricLabels['overdue'] ?? 'Overdue',
                 m.overdue,
                 Icons.warning_amber_outlined,
                 AppColors.statusOverdue,
                 onTap: () => context.go('/tasks?status=overdue'),
               ),
               _StatCard(
-                'New',
+                data.metricLabels['new'] ?? 'New',
                 m.newTickets,
                 Icons.fiber_new_outlined,
                 AppColors.statusLogged,
                 onTap: () => context.go('/tasks?status=logged'),
               ),
               _StatCard(
-                'Closed',
+                data.metricLabels['closed'] ?? 'Closed',
                 m.closed,
                 Icons.lock_outline,
                 AppColors.statusClosed,
@@ -162,7 +162,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 20),
           // Pie chart
-          if (data.byStatus.isNotEmpty) _buildPieChart(data.byStatus),
+          if (data.byStatus.isNotEmpty)
+            _buildPieChart(data.byStatus, data.statusLabels),
           const SizedBox(height: 20),
           // Recent tickets
           if (data.recentTickets.isNotEmpty) ...[
@@ -175,6 +176,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ...data.recentTickets.map(
               (t) => _RecentTicketTile(
                 ticket: t,
+                statusLabels: data.statusLabels,
                 onTap: () => context.go('/tasks/${t.id}'),
               ),
             ),
@@ -184,7 +186,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildPieChart(Map<String, int> byStatus) {
+  Widget _buildPieChart(Map<String, int> byStatus, Map<String, String> statusLabels) {
     final entries = byStatus.entries
         .where((e) => e.value > 0)
         .toList();
@@ -249,7 +251,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             decoration: BoxDecoration(
                                 color: color, shape: BoxShape.circle)),
                         const SizedBox(width: 4),
-                        Text(e.key.replaceAll('_', ' '),
+                        Text(statusLabels[e.key] ?? _formatStatusLabel(e.key),
                             style: const TextStyle(
                                 color: AppColors.textSecondary, fontSize: 11)),
                       ],
@@ -262,6 +264,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
+  }
+
+  String _formatStatusLabel(String value) {
+    return value
+        .replaceAll('_', ' ')
+        .split(' ')
+        .where((part) => part.isNotEmpty)
+        .map((part) => part[0].toUpperCase() + part.substring(1))
+        .join(' ');
   }
 }
 
@@ -322,9 +333,14 @@ class _StatCard extends StatelessWidget {
 
 class _RecentTicketTile extends StatelessWidget {
   final RecentTicket ticket;
+  final Map<String, String> statusLabels;
   final VoidCallback? onTap;
 
-  const _RecentTicketTile({required this.ticket, this.onTap});
+  const _RecentTicketTile({
+    required this.ticket,
+    required this.statusLabels,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -366,11 +382,11 @@ class _RecentTicketTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withAlpha(26),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  ticket.status.replaceAll('_', ' ').toUpperCase(),
+                  statusLabels[ticket.status] ?? _formatStatusLabel(ticket.status),
                   style: TextStyle(
                       color: color, fontSize: 9, fontWeight: FontWeight.bold),
                 ),
@@ -380,5 +396,14 @@ class _RecentTicketTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatStatusLabel(String value) {
+    return value
+        .replaceAll('_', ' ')
+        .split(' ')
+        .where((part) => part.isNotEmpty)
+        .map((part) => part[0].toUpperCase() + part.substring(1))
+        .join(' ');
   }
 }
