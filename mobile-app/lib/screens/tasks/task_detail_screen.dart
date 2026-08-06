@@ -1,9 +1,12 @@
+import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/models/user_model.dart';
@@ -114,6 +117,150 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Future<void> _refreshTicketData() async {
     await context.read<TicketProvider>().loadTicket(widget.ticketId);
     await _loadPhases();
+  }
+
+  Future<void> _downloadAttachment({
+    required BuildContext context,
+    required String url,
+    required String fileName,
+  }) async {
+    final safeFileName = fileName
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')
+        .trim();
+    final downloadDir = await getApplicationDocumentsDirectory();
+    final targetDir = Directory('${downloadDir.path}/downloads');
+    if (!await targetDir.exists()) {
+      await targetDir.create(recursive: true);
+    }
+
+    final targetPath = '${targetDir.path}/$safeFileName';
+    try {
+      await ApiService.instance.dio.download(url, targetPath);
+      if (!mounted) return;
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Downloaded to $targetPath')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to download attachment.')),
+      );
+    }
+  }
+
+  void _showAttachmentActions({
+    required BuildContext context,
+    required String fileName,
+    required String mimeType,
+    required String? url,
+  }) {
+    if (url == null || url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Attachment is not available yet.')),
+      );
+      return;
+    }
+
+    final isImage = mimeType.toLowerCase().startsWith('image/');
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+                  child: Text(
+                    fileName,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (isImage)
+                  ListTile(
+                    leading: const Icon(Icons.remove_red_eye_outlined),
+                    title: const Text('View image'),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      showDialog(
+                        context: context,
+                        builder: (dialogContext) => Dialog(
+                          insetPadding: const EdgeInsets.all(12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AppBar(
+                                backgroundColor: Colors.black,
+                                foregroundColor: Colors.white,
+                                title: Text(fileName),
+                                automaticallyImplyLeading: false,
+                                actions: [
+                                  IconButton(
+                                    onPressed: () => Navigator.pop(dialogContext),
+                                    icon: const Icon(Icons.close),
+                                  ),
+                                ],
+                              ),
+                              Expanded(
+                                child: Container(
+                                  color: Colors.black,
+                                  child: InteractiveViewer(
+                                    child: Center(
+                                      child: CachedNetworkImage(
+                                        imageUrl: url,
+                                        fit: BoxFit.contain,
+                                        placeholder: (context, _) => const Center(
+                                          child: CircularProgressIndicator(
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                        errorWidget: (context, _, _) => const Center(
+                                          child: Icon(
+                                            Icons.broken_image_outlined,
+                                            color: Colors.white,
+                                            size: 48,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ListTile(
+                  leading: const Icon(Icons.download_outlined),
+                  title: const Text('Download attachment'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _downloadAttachment(
+                      context: context,
+                      url: url,
+                      fileName: fileName,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -334,38 +481,46 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 ),
                 const SizedBox(height: 10),
                 ...ticket.attachments.map(
-                  (attachment) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Icon(
-                          attachment.attachmentType == 'image'
-                              ? Icons.image_outlined
-                              : Icons.description_outlined,
-                          color: AppColors.primary,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            attachment.fileName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 12,
+                  (attachment) => InkWell(
+                    onTap: () => _showAttachmentActions(
+                      context: context,
+                      fileName: attachment.fileName,
+                      mimeType: attachment.mimeType,
+                      url: attachment.url,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            attachment.attachmentType == 'image'
+                                ? Icons.image_outlined
+                                : Icons.description_outlined,
+                            color: AppColors.primary,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              attachment.fileName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _formatDateTime(attachment.createdAt),
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 10,
+                          const SizedBox(width: 8),
+                          Text(
+                            _formatDateTime(attachment.createdAt),
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 10,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -702,38 +857,51 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 final attachmentType =
                     (attachment['attachment_type'] as String?) ?? 'document';
                 final createdAt = attachment['created_at'] as String?;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      Icon(
-                        attachmentType == 'image'
-                            ? Icons.image_outlined
-                            : Icons.description_outlined,
-                        color: AppColors.primary,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          fileName,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 12,
+                final mimeType = (attachment['mime_type'] as String?) ??
+                    (attachmentType == 'image'
+                        ? 'image/*'
+                        : 'application/octet-stream');
+                final url = attachment['url'] as String?;
+                return InkWell(
+                  onTap: () => _showAttachmentActions(
+                    context: context,
+                    fileName: fileName,
+                    mimeType: mimeType,
+                    url: url,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Icon(
+                          attachmentType == 'image'
+                              ? Icons.image_outlined
+                              : Icons.description_outlined,
+                          color: AppColors.primary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            fileName,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _formatDateTime(createdAt),
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 10,
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatDateTime(createdAt),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 10,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

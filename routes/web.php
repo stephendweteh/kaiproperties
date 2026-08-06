@@ -68,10 +68,10 @@ Route::middleware('auth')->group(function (): void {
 
 	Route::prefix('admin')->name('admin.')->middleware('admin')->group(function (): void {
 		// Read-only routes — accessible to all admin roles including Managing Director & General Manager
-		Route::resource('customers', AdminCustomerController::class)->only(['index', 'show']);
-		Route::resource('properties', AdminPropertyController::class)->only(['index']);
-		Route::resource('categories', AdminCategoryController::class)->only(['index']);
-		Route::resource('users', AdminUserController::class)->only(['index']);
+		Route::resource('customers', AdminCustomerController::class)->only(['index', 'show'])->whereNumber('customer');
+		Route::resource('properties', AdminPropertyController::class)->only(['index'])->whereNumber('property');
+		Route::resource('categories', AdminCategoryController::class)->only(['index'])->whereNumber('category');
+		Route::resource('users', AdminUserController::class)->only(['index'])->whereNumber('user');
 
 		// Write routes — restricted to Admin and Operations Manager only
 		Route::middleware('admin_writer')->group(function (): void {
