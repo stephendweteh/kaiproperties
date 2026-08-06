@@ -29,7 +29,7 @@ class TicketController extends Controller
         $isReporterScopedRole = $this->isReporterScopedRole($user);
 
         $query = Ticket::query()
-            ->with(['property', 'category', 'reporter:id,name,email', 'technician:id,name,email'])
+            ->with(['property', 'category', 'reporter:id,name,email', 'technician:id,name,email', 'technicians:id,name,email'])
             ->when($request->filled('status'), function (Builder $builder) use ($request): void {
                 $status = $request->string('status')->toString();
 
@@ -46,7 +46,7 @@ class TicketController extends Controller
             })
             ->when($request->filled('property_id'), fn (Builder $builder) => $builder->where('property_id', $request->integer('property_id')))
             ->when($request->filled('maintenance_category_id'), fn (Builder $builder) => $builder->where('maintenance_category_id', $request->integer('maintenance_category_id')))
-            ->when($request->filled('assigned_to'), fn (Builder $builder) => $builder->where('assigned_to', $request->integer('assigned_to')))
+            ->when($request->filled('assigned_to'), fn (Builder $builder) => $builder->whereHas('technicians', fn (Builder $technicianQuery) => $technicianQuery->whereKey($request->integer('assigned_to'))))
             ->when($request->filled('search'), function (Builder $builder) use ($request): void {
                 $search = $request->string('search');
 
@@ -80,6 +80,7 @@ class TicketController extends Controller
         }
 
         $validated = $request->validated();
+        $technicianIds = $this->normalizeTechnicianIds($validated['assigned_to'] ?? []);
 
         if (empty($validated['estimated_cost'])) {
             $validated['estimated_cost_currency'] = null;
@@ -90,11 +91,14 @@ class TicketController extends Controller
         $ticket = Ticket::create([
             ...$validated,
             'reported_by' => $request->user()->id,
+            'assigned_to' => $technicianIds[0] ?? null,
             'status' => $status,
             'priority' => $validated['priority'] ?? 'medium',
         ]);
 
-        $ticketForNotification = $ticket->fresh(['reporter', 'technician']);
+        $ticket->syncTechnicians($technicianIds);
+
+        $ticketForNotification = $ticket->fresh(['reporter', 'technician', 'technicians']);
         app()->terminating(function () use ($ticketForNotification): void {
             $this->notificationService->sendTicketLogged($ticketForNotification);
         });
@@ -103,7 +107,7 @@ class TicketController extends Controller
             'message' => $status === 'pending_approval'
                 ? 'Ticket created and sent for approval.'
                 : 'Ticket created successfully.',
-            'data' => TicketResource::make($ticket->load(['property', 'category', 'reporter'])),
+            'data' => TicketResource::make($ticket->load(['property', 'category', 'reporter', 'technician', 'technicians'])),
         ], 201);
     }
 
@@ -117,6 +121,7 @@ class TicketController extends Controller
                 'category',
                 'reporter:id,name,email',
                 'technician:id,name,email',
+                'technicians:id,name,email',
                 'costRequests.requester:id,name,email',
                 'costRequests.reviewer:id,name,email',
             ])),
@@ -132,22 +137,20 @@ class TicketController extends Controller
         }
 
         $validated = $request->validated();
+        $technicianIds = $this->normalizeTechnicianIds($validated['assigned_to'] ?? []);
 
-        $technician = User::where('id', $validated['assigned_to'])
-            ->where('role', User::ROLE_TECHNICIAN)
-            ->first();
-
-        if (! $technician) {
-            return response()->json(['message' => 'Selected user is not a technician.'], 422);
+        if ($technicianIds === []) {
+            return response()->json(['message' => 'Assign at least one technician.'], 422);
         }
 
-        $attributes = ['assigned_to' => $validated['assigned_to']];
+        $attributes = ['assigned_to' => $technicianIds[0]];
 
         if (in_array($ticket->status, ['logged', 'pending_approval', 'rejected'], true)) {
             $attributes['status'] = 'assigned';
         }
 
         $ticket->update($attributes);
+        $ticket->syncTechnicians($technicianIds);
 
         $ticketForNotification = $ticket->fresh();
         app()->terminating(function () use ($ticketForNotification): void {
@@ -156,7 +159,7 @@ class TicketController extends Controller
 
         return response()->json([
             'message' => 'Ticket assigned successfully.',
-            'data' => TicketResource::make($ticket->fresh()->load(['property', 'category', 'reporter', 'technician'])),
+            'data' => TicketResource::make($ticket->fresh()->load(['property', 'category', 'reporter', 'technician', 'technicians'])),
         ]);
     }
 
@@ -165,7 +168,7 @@ class TicketController extends Controller
         $user = $request->user();
         $previousStatus = $ticket->status;
 
-        if ($user->hasRole(User::ROLE_TECHNICIAN) && (int) $ticket->assigned_to !== (int) $user->id) {
+        if ($user->hasRole(User::ROLE_TECHNICIAN) && ! $ticket->hasTechnicianAssignment($user->id)) {
             return response()->json(['message' => 'You can only update your assigned tickets.'], 403);
         }
 
@@ -180,12 +183,13 @@ class TicketController extends Controller
         if (
             $user->hasRole(User::ROLE_OPERATIONS_MANAGER)
             && in_array($request->string('status')->toString(), ['logged', 'on_hold'], true)
-            && empty($ticket->assigned_to)
+            && ! $ticket->technicians()->exists()
         ) {
             return response()->json(['message' => 'Assign a technician before approving or placing this ticket on hold.'], 422);
         }
 
         $validated = $request->validated();
+        $technicianIds = $this->normalizeTechnicianIds($validated['assigned_to'] ?? []);
         $previousStatus = $ticket->status;
 
         $attributes = ['status' => $validated['status']];
@@ -213,7 +217,7 @@ class TicketController extends Controller
 
         return response()->json([
             'message' => 'Ticket status updated.',
-            'data' => TicketResource::make($ticket->fresh()->load(['property', 'category', 'reporter', 'technician'])),
+            'data' => TicketResource::make($ticket->fresh()->load(['property', 'category', 'reporter', 'technician', 'technicians'])),
         ]);
     }
 
@@ -299,7 +303,7 @@ class TicketController extends Controller
 
         if (
             $user->hasRole(User::ROLE_TECHNICIAN)
-            && (int) $ticket->assigned_to === (int) $user->id
+            && $ticket->hasTechnicianAssignment($user->id)
             && in_array($ticket->status, $this->technicianVisibleStatuses(), true)
         ) {
             return;
@@ -353,5 +357,15 @@ class TicketController extends Controller
             User::ROLE_MANAGING_DIRECTOR,
             User::ROLE_GENERAL_MANAGER,
         ]);
+    }
+
+    private function normalizeTechnicianIds(array $technicianIds): array
+    {
+        return collect($technicianIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

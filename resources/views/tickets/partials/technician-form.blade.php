@@ -17,8 +17,8 @@
             <input type="text" value="{{ $ticket->category->name }}" disabled>
         </div>
         <div>
-            <label>Assigned Technician</label>
-            <input type="text" value="{{ $ticket->technician?->name ?? '-' }}" disabled>
+            <label>Assigned Technicians</label>
+            <input type="text" value="{{ $ticket->technicians->isNotEmpty() ? $ticket->technicians->pluck('name')->join(', ') : ($ticket->technician?->name ?? '-') }}" disabled>
         </div>
     </div>
 

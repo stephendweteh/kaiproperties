@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -90,6 +91,43 @@ class Ticket extends Model
     public function technician(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function technicians(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'ticket_technician')
+            ->withTimestamps()
+            ->orderBy('name');
+    }
+
+    public function syncTechnicians(array $technicianIds): void
+    {
+        $ids = collect($technicianIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+
+        $this->assigned_to = $ids->first();
+        $this->save();
+
+        $this->technicians()->sync($ids->all());
+        $this->unsetRelation('technicians');
+    }
+
+    public function hasTechnicianAssignment(int|string|null $userId): bool
+    {
+        $technicianId = (int) $userId;
+
+        if ($technicianId <= 0) {
+            return false;
+        }
+
+        if ($this->relationLoaded('technicians')) {
+            return $this->technicians->contains('id', $technicianId);
+        }
+
+        return $this->technicians()->whereKey($technicianId)->exists();
     }
 
     public function costRequests(): HasMany

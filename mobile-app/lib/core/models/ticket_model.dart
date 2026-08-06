@@ -17,6 +17,7 @@ class TicketModel {
   final CategoryRef? category;
   final UserRef? reporter;
   final UserRef? technician;
+  final List<UserRef> technicians;
   final List<TicketAttachmentModel> attachments;
   final String? createdAt;
   final String? updatedAt;
@@ -40,6 +41,7 @@ class TicketModel {
     this.category,
     this.reporter,
     this.technician,
+    this.technicians = const [],
     this.attachments = const [],
     this.createdAt,
     this.updatedAt,
@@ -73,6 +75,10 @@ class TicketModel {
         technician: json['technician'] != null
             ? UserRef.fromJson(json['technician'] as Map<String, dynamic>)
             : null,
+        technicians: (json['technicians'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(UserRef.fromJson)
+            .toList(growable: false),
         attachments: (json['attachments'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(TicketAttachmentModel.fromJson)
@@ -80,6 +86,9 @@ class TicketModel {
         createdAt: json['created_at'] as String?,
         updatedAt: json['updated_at'] as String?,
       );
+
+  List<UserRef> get assignedTechnicians =>
+      technicians.isNotEmpty ? technicians : [if (technician != null) technician!];
 
   bool get isOverdue {
     if (etd == null) return false;

@@ -35,7 +35,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
 
   int? _propertyId;
   int? _categoryId;
-  int? _assignedTo;
+  final List<int> _assignedTechnicianIds = [];
   int? _reportedBy;
 
   String _priority = 'medium';
@@ -304,7 +304,22 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
         _unitCtrl.text = ticketData['unit'] as String? ?? '';
         _propertyId = _asInt(ticketData['property']?['id']);
         _categoryId = _asInt(ticketData['category']?['id']);
-        _assignedTo = _asInt(ticketData['technician']?['id']);
+        _assignedTechnicianIds.clear();
+        final techniciansData = ticketData['technicians'];
+        if (techniciansData is List) {
+          for (final item in techniciansData.whereType<Map<String, dynamic>>()) {
+            final id = _asInt(item['id']);
+            if (id != null && !_assignedTechnicianIds.contains(id)) {
+              _assignedTechnicianIds.add(id);
+            }
+          }
+        }
+        if (_assignedTechnicianIds.isEmpty) {
+          final primaryTechnicianId = _asInt(ticketData['technician']?['id']);
+          if (primaryTechnicianId != null) {
+            _assignedTechnicianIds.add(primaryTechnicianId);
+          }
+        }
         _reportedBy = _asInt(ticketData['reporter']?['id']);
         _priority = ticketData['priority'] as String? ?? 'medium';
         _etd = DateTime.tryParse(ticketData['etd'] as String? ?? '');
@@ -492,7 +507,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
       'estimated_cost_currency':
           estimatedCost == null ? null : _estimatedCostCurrency,
       if (!_isReporterScopedRole && !_isEditMode) 'reported_by': _reportedBy,
-      if (!_isEditMode) 'assigned_to': _assignedTo,
+      if (!_isEditMode || _assignedTechnicianIds.isNotEmpty) 'assigned_to': _assignedTechnicianIds,
     };
 
     final ticketProvider = context.read<TicketProvider>();
@@ -922,30 +937,38 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
           decoration: _decor('Reporter', Icons.person_outline),
         ),
         const SizedBox(height: _fieldSpacing),
-        DropdownButtonFormField<int>(
-          initialValue: _assignedTo,
-          hint: const Text(
-            'Assign Technician (Optional)',
-            style: TextStyle(
-              color: AppColors.textLight,
-              fontSize: 14,
-            ),
+        const SizedBox(height: 2),
+        const Text(
+          'Assign Technicians (Optional)',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
           ),
-          items: [
-            const DropdownMenuItem<int>(
-              value: null,
-              child: Text('Unassigned'),
-            ),
-            ..._technicians.map(
-              (t) => DropdownMenuItem<int>(
-                value: _asInt(t['id']),
-                child: Text((t['name'] as String?) ?? 'Technician'),
-              ),
-            ),
-          ],
-          onChanged: (v) => setState(() => _assignedTo = v),
-          decoration:
-              _decor('Assigned Technician', Icons.engineering),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _technicians.map((technician) {
+            final id = _asInt(technician['id']);
+            final name = (technician['name'] as String?) ?? 'Technician';
+            if (id == null) return const SizedBox.shrink();
+            final selected = _assignedTechnicianIds.contains(id);
+            return FilterChip(
+              label: Text(name),
+              selected: selected,
+              onSelected: (_) {
+                setState(() {
+                  if (selected) {
+                    _assignedTechnicianIds.remove(id);
+                  } else {
+                    _assignedTechnicianIds.add(id);
+                  }
+                });
+              },
+            );
+          }).toList(),
         ),
       ],
     );

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -26,12 +27,25 @@ class DashboardController extends Controller
             'closed' => (clone $baseQuery)->where('status', 'closed')->count(),
         ];
 
-        $byTechnician = Ticket::query()
-            ->select('users.id', 'users.name', DB::raw('COUNT(tickets.id) as tickets_count'))
-            ->join('users', 'users.id', '=', 'tickets.assigned_to')
-            ->groupBy('users.id', 'users.name')
-            ->orderByDesc('tickets_count')
-            ->get();
+        if (Schema::hasTable('ticket_technician')) {
+            $byTechnician = Ticket::query()
+                ->select('users.id', 'users.name', DB::raw('COUNT(tickets.id) as tickets_count'))
+                ->join('ticket_technician', 'ticket_technician.ticket_id', '=', 'tickets.id')
+                ->join('users', 'users.id', '=', 'ticket_technician.user_id')
+                ->groupBy('users.id', 'users.name')
+                ->orderByDesc('tickets_count')
+                ->get();
+        } elseif (Schema::hasColumn('tickets', 'assigned_to')) {
+            $byTechnician = Ticket::query()
+                ->select('users.id', 'users.name', DB::raw('COUNT(tickets.id) as tickets_count'))
+                ->join('users', 'users.id', '=', 'tickets.assigned_to')
+                ->whereNotNull('tickets.assigned_to')
+                ->groupBy('users.id', 'users.name')
+                ->orderByDesc('tickets_count')
+                ->get();
+        } else {
+            $byTechnician = collect();
+        }
 
         $byProperty = Ticket::query()
             ->select('properties.id', 'properties.name', DB::raw('COUNT(tickets.id) as tickets_count'))

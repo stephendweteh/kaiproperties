@@ -1,6 +1,45 @@
 @extends('layouts.app', ['title' => 'View Ticket'])
 
 @section('content')
+    @once
+        <style>
+            .assign-tech-list {
+                max-height: 180px;
+                overflow-y: auto;
+                border: 1px solid #d5dde6;
+                border-radius: 8px;
+                padding: 0.55rem 0.7rem;
+                background: #fff;
+            }
+
+            .assign-tech-option {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.5rem;
+                margin-bottom: 0.45rem;
+                font-weight: 500;
+                line-height: 1.25;
+                cursor: pointer;
+            }
+
+            .assign-tech-option:last-child {
+                margin-bottom: 0;
+            }
+
+            .assign-tech-option input[type='checkbox'] {
+                width: 16px;
+                height: 16px;
+                margin: 0.08rem 0 0;
+                flex: 0 0 auto;
+            }
+
+            .assign-tech-option span {
+                display: inline-block;
+                padding-top: 0.01rem;
+            }
+        </style>
+    @endonce
+
     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem;">
         <div>
             <h2 style="margin-bottom:0.3rem;">Ticket {{ $ticket->ticket_no }}</h2>
@@ -15,13 +54,27 @@
                 <form method="POST" action="{{ route('tickets.review', $ticket) }}" style="display:flex; align-items:flex-end; gap:0.45rem; flex-wrap:wrap;" data-loader-action="ticket-review">
                     @csrf
                     <div style="min-width: 220px;">
-                        <label for="assigned_to" class="muted" style="display:block; margin-bottom:0.25rem;">Assign Technician</label>
-                        <select id="assigned_to" name="assigned_to" required>
-                            <option value="">Select Technician</option>
-                            @foreach(($technicians ?? collect()) as $technician)
-                                <option value="{{ $technician->id }}" @selected((string) old('assigned_to', $ticket->assigned_to ?? '') === (string) $technician->id)>{{ $technician->name }}</option>
-                            @endforeach
-                        </select>
+                        <label class="muted" style="display:block; margin-bottom:0.25rem;">Assign Technicians</label>
+                        @php
+                            $selectedTechnicianIds = collect(old('assigned_to', $ticket->technicians->pluck('id')->all()))
+                                ->filter()
+                                ->map(fn ($id) => (string) $id)
+                                ->all();
+                        @endphp
+                        <div class="assign-tech-list" style="min-width: 240px;">
+                            @forelse(($technicians ?? collect()) as $technician)
+                                <label class="assign-tech-option">
+                                    <input
+                                        type="checkbox"
+                                        name="assigned_to[]"
+                                        value="{{ $technician->id }}"
+                                        @checked(in_array((string) $technician->id, $selectedTechnicianIds, true))>
+                                    <span>{{ $technician->name }}</span>
+                                </label>
+                            @empty
+                                <small class="muted">No technicians available.</small>
+                            @endforelse
+                        </div>
                     </div>
                     <button type="submit" name="decision" value="approve" class="btn btn-alt" data-loader-action="ticket-review-approve">Approve</button>
                     <button type="submit" name="decision" value="hold" class="btn btn-danger" data-loader-action="ticket-review-hold">Hold</button>
@@ -80,7 +133,13 @@
             </div>
             <div>
                 <div class="muted">Assigned Technician</div>
-                <div>{{ $ticket->technician?->name ?? 'Unassigned' }}</div>
+                <div>
+                    @if($ticket->technicians->isNotEmpty())
+                        {{ $ticket->technicians->pluck('name')->join(', ') }}
+                    @else
+                        {{ $ticket->technician?->name ?? 'Unassigned' }}
+                    @endif
+                </div>
             </div>
             <div>
                 <div class="muted">Expected Completion</div>
@@ -144,7 +203,7 @@
 
     @if(($canViewWorkProgress ?? false) && $ticket->phases->isNotEmpty())
     <section class="card">
-        <h3 style="margin-top:0;">Technician Work Progress — {{ $ticket->technician?->name ?? 'Unassigned' }}</h3>
+        <h3 style="margin-top:0;">Technician Work Progress — {{ $ticket->technicians->isNotEmpty() ? $ticket->technicians->pluck('name')->join(', ') : ($ticket->technician?->name ?? 'Unassigned') }}</h3>
         <div class="table-wrap" style="margin-bottom:1rem;">
             <table style="width:100%; min-width:1280px; border-collapse:collapse; table-layout:auto;">
                 <thead>

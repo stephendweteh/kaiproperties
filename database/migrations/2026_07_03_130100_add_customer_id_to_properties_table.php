@@ -11,6 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('properties') || ! Schema::hasTable('customers')) {
+            return;
+        }
+
+        if (Schema::hasColumn('properties', 'customer_id')) {
+            return;
+        }
+
         Schema::table('properties', function (Blueprint $table): void {
             $table->foreignId('customer_id')
                 ->nullable()
@@ -25,6 +33,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasTable('properties') || ! Schema::hasColumn('properties', 'customer_id')) {
+            return;
+        }
+
         Schema::table('properties', function (Blueprint $table): void {
             $table->dropConstrainedForeignId('customer_id');
         });

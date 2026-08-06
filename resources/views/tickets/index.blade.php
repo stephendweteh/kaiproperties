@@ -137,7 +137,9 @@
                         </div>
                     </td>
                     <td>{{ $ticket->completed_at?->format('Y-m-d H:i') ?? '-' }}</td>
-                    <td>{{ $ticket->technician?->name ?? 'Unassigned' }}</td>
+                    <td>
+                        {{ $ticket->technicians->isNotEmpty() ? $ticket->technicians->pluck('name')->join(', ') : ($ticket->technician?->name ?? 'Unassigned') }}
+                    </td>
                     <td>{{ $ticket->etd?->format('Y-m-d H:i') ?? '-' }}</td>
                     <td>
                         @if($ticket->estimated_cost !== null)

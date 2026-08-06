@@ -7,3 +7,38 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+.assign-tech-list {
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid #d5dde6;
+    border-radius: 8px;
+    padding: 0.55rem 0.7rem;
+    background: #fff;
+}
+
+.assign-tech-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.45rem;
+    font-weight: 500;
+    line-height: 1.25;
+    cursor: pointer;
+}
+
+.assign-tech-option:last-child {
+    margin-bottom: 0;
+}
+
+.assign-tech-option input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    margin: 0.08rem 0 0;
+    flex: 0 0 auto;
+}
+
+.assign-tech-option span {
+    display: inline-block;
+    padding-top: 0.01rem;
+}

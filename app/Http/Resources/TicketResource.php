@@ -33,6 +33,7 @@ class TicketResource extends JsonResource
             'category' => MaintenanceCategoryResource::make($this->whenLoaded('category')),
             'reporter' => UserResource::make($this->whenLoaded('reporter')),
             'technician' => UserResource::make($this->whenLoaded('technician')),
+            'technicians' => UserResource::collection($this->whenLoaded('technicians')),
             'cost_requests' => CostRequestResource::collection($this->whenLoaded('costRequests')),
             'attachments' => TicketAttachmentResource::collection($this->whenLoaded('attachments')),
             'created_at' => $this->created_at?->toIso8601String(),

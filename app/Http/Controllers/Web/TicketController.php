@@ -38,6 +38,7 @@ class TicketController extends Controller
                 'category',
                 'reporter:id,name',
                 'technician:id,name',
+                'technicians:id,name',
                 'attachments:id,ticket_id,file_path,file_name,attachment_type',
             ])
             ->when(
@@ -45,7 +46,7 @@ class TicketController extends Controller
                 fn (Builder $builder) => $builder->where('reported_by', $request->user()->id)
             )
             ->when($isTechnician, fn (Builder $builder) => $builder
-                ->where('assigned_to', $request->user()->id)
+                ->whereHas('technicians', fn (Builder $technicianQuery) => $technicianQuery->whereKey($request->user()->id))
                 ->whereIn('status', $this->technicianVisibleStatuses()))
             ->when($request->filled('status'), function (Builder $builder) use ($request): void {
                 $status = $request->string('status')->toString();
@@ -66,7 +67,7 @@ class TicketController extends Controller
             })
             ->when($request->filled('property_id'), fn (Builder $builder) => $builder->where('property_id', $request->integer('property_id')))
             ->when($request->filled('maintenance_category_id'), fn (Builder $builder) => $builder->where('maintenance_category_id', $request->integer('maintenance_category_id')))
-            ->when($request->filled('assigned_to'), fn (Builder $builder) => $builder->where('assigned_to', $request->integer('assigned_to')))
+            ->when($request->filled('assigned_to'), fn (Builder $builder) => $builder->whereHas('technicians', fn (Builder $technicianQuery) => $technicianQuery->whereKey($request->integer('assigned_to'))))
             ->when($request->filled('search'), function (Builder $builder) use ($request): void {
                 $search = $request->string('search');
 
@@ -133,6 +134,7 @@ class TicketController extends Controller
             'category',
             'reporter:id,name',
             'technician:id,name',
+            'technicians:id,name',
             'attachments.uploader:id,name',
             'phases.attachments.uploader:id,name',
         ]);
@@ -171,7 +173,8 @@ class TicketController extends Controller
             'maintenance_category_id' => ['required', 'exists:maintenance_categories,id'],
             'unit' => ['nullable', 'string', 'max:100'],
             'reported_by' => $isTenant ? ['nullable'] : ['required', 'exists:users,id'],
-            'assigned_to' => $isTenant ? ['nullable'] : ['nullable', 'exists:users,id'],
+            'assigned_to' => ['nullable', 'array'],
+            'assigned_to.*' => ['integer', 'distinct', 'exists:users,id'],
             'priority' => ['required', 'in:low,medium,high,urgent'],
             'etd' => ['nullable', 'date'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],
@@ -184,7 +187,7 @@ class TicketController extends Controller
 
         if ($isTenant) {
             $validated['reported_by'] = $request->user()->id;
-            $validated['assigned_to'] = null;
+            $validated['assigned_to'] = [];
         }
 
         if (empty($validated['estimated_cost'])) {
@@ -193,14 +196,19 @@ class TicketController extends Controller
 
         $status = $this->mustGoThroughOperationsApproval($user) ? 'pending_approval' : 'logged';
 
+        $technicianIds = $this->normalizeTechnicianIds($validated['assigned_to'] ?? []);
+
         $ticket = Ticket::create([
             ...$validated,
+            'assigned_to' => $technicianIds[0] ?? null,
             'status' => $status,
         ]);
 
+        $ticket->syncTechnicians($technicianIds);
+
         $this->storeAttachments($request, $ticket);
 
-        $ticketForNotification = $ticket->fresh(['reporter', 'technician']);
+        $ticketForNotification = $ticket->fresh(['reporter', 'technician', 'technicians']);
         app()->terminating(function () use ($ticketForNotification): void {
             $this->notificationService->sendTicketLogged($ticketForNotification);
         });
@@ -222,7 +230,7 @@ class TicketController extends Controller
 
         $reviewMode = $this->canApproveTickets($user) && ! $this->canEditTickets($user);
 
-        $ticket->load(['reporter:id,name', 'technician:id,name', 'attachments.uploader:id,name', 'phases.attachments.uploader:id,name']);
+        $ticket->load(['reporter:id,name', 'technician:id,name', 'technicians:id,name', 'attachments.uploader:id,name', 'phases.attachments.uploader:id,name']);
 
         return view('tickets.edit', [
             'ticket' => $ticket,
@@ -419,30 +427,23 @@ class TicketController extends Controller
 
         if ($canApproveTickets && ! $canEditTickets) {
             $validated = $request->validate([
-                'assigned_to' => ['nullable', 'exists:users,id'],
+                'assigned_to' => ['nullable', 'array'],
+                'assigned_to.*' => ['integer', 'distinct', 'exists:users,id'],
                 'status' => ['required', 'in:logged,on_hold'],
             ]);
 
-            $assignedTo = ! empty($validated['assigned_to'])
-                ? (int) $validated['assigned_to']
-                : (int) ($ticket->assigned_to ?? 0);
+            $technicianIds = $this->normalizeTechnicianIds($validated['assigned_to'] ?? []);
 
-            if ($assignedTo > 0) {
-                $technician = User::where('id', $assignedTo)
-                    ->where('role', User::ROLE_TECHNICIAN)
-                    ->first();
-
-                if (! $technician) {
-                    return back()->withErrors(['assigned_to' => 'Selected user is not a technician.'])->withInput();
-                }
+            if ($technicianIds === []) {
+                $technicianIds = $ticket->technicians()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
             }
 
-            if ($assignedTo === 0) {
+            if ($technicianIds === []) {
                 return back()->withErrors(['assigned_to' => 'Assign a technician before approving or placing this ticket on hold.'])->withInput();
             }
 
             $attributes = [
-                'assigned_to' => $assignedTo > 0 ? $assignedTo : null,
+                'assigned_to' => $technicianIds[0] ?? null,
                 'status' => $validated['status'],
             ];
 
@@ -459,6 +460,7 @@ class TicketController extends Controller
             }
 
             $ticket->update($attributes);
+            $ticket->syncTechnicians($technicianIds);
 
             $ticket->refresh();
 
@@ -470,7 +472,7 @@ class TicketController extends Controller
             }
 
             if ($previousStatus !== $ticket->status) {
-                $ticketForNotification = $ticket->fresh(['reporter', 'technician']);
+                $ticketForNotification = $ticket->fresh(['reporter', 'technician', 'technicians']);
                 app()->terminating(function () use ($ticketForNotification, $previousStatus): void {
                     $this->notificationService->sendTicketStatusChanged($ticketForNotification, $previousStatus);
                 });
@@ -487,7 +489,8 @@ class TicketController extends Controller
             'property_id' => ['required', 'exists:properties,id'],
             'maintenance_category_id' => ['required', 'exists:maintenance_categories,id'],
             'unit' => ['nullable', 'string', 'max:100'],
-            'assigned_to' => ['nullable', 'exists:users,id'],
+            'assigned_to' => ['nullable', 'array'],
+            'assigned_to.*' => ['integer', 'distinct', 'exists:users,id'],
             'status' => ['required', 'in:logged,assigned,in_progress,pending_approval,on_hold,completed,closed,rejected,overdue'],
             'priority' => ['required', 'in:low,medium,high,urgent'],
             'etd' => ['nullable', 'date'],
@@ -502,7 +505,9 @@ class TicketController extends Controller
             'remove_attachment_ids.*' => ['integer'],
         ]);
 
-        if (! $validated['assigned_to'] && $validated['status'] === 'assigned') {
+        $technicianIds = $this->normalizeTechnicianIds($validated['assigned_to'] ?? []);
+
+        if ($technicianIds === [] && $validated['status'] === 'assigned') {
             $validated['status'] = 'logged';
         }
 
@@ -522,7 +527,11 @@ class TicketController extends Controller
             $validated['estimated_cost_currency'] = null;
         }
 
-        $ticket->update($validated);
+        $ticket->update([
+            ...$validated,
+            'assigned_to' => $technicianIds[0] ?? null,
+        ]);
+        $ticket->syncTechnicians($technicianIds);
 
         $this->removeSelectedAttachments($request, $ticket);
         $this->storeAttachments($request, $ticket);
@@ -537,7 +546,7 @@ class TicketController extends Controller
         }
 
         if ($previousStatus !== $ticket->status) {
-            $ticketForNotification = $ticket->fresh(['reporter', 'technician']);
+            $ticketForNotification = $ticket->fresh(['reporter', 'technician', 'technicians']);
             app()->terminating(function () use ($ticketForNotification, $previousStatus): void {
                 $this->notificationService->sendTicketStatusChanged($ticketForNotification, $previousStatus);
             });
@@ -774,7 +783,7 @@ class TicketController extends Controller
     {
         return (bool) (
             $user?->hasRole(User::ROLE_TECHNICIAN)
-            && (int) $ticket->assigned_to === (int) $user->id
+            && $ticket->hasTechnicianAssignment($user->id)
             && in_array($ticket->status, $this->technicianVisibleStatuses(), true)
         );
     }
@@ -783,9 +792,19 @@ class TicketController extends Controller
     {
         return (bool) (
             $user?->hasRole(User::ROLE_TECHNICIAN)
-            && (int) $ticket->assigned_to === (int) $user->id
+            && $ticket->hasTechnicianAssignment($user->id)
             && in_array($ticket->status, ['logged', 'assigned', 'in_progress'], true)
         );
+    }
+
+    private function normalizeTechnicianIds(array $technicianIds): array
+    {
+        return collect($technicianIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function technicianVisibleStatuses(): array

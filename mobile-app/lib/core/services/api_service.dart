@@ -293,7 +293,7 @@ class ApiService {
     return res.data as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> assignTicket(int id, int assignedTo) async {
+  Future<Map<String, dynamic>> assignTicket(int id, List<int> assignedTo) async {
     final res = await dio.patch(
       '/tickets/$id/assign',
       data: {'assigned_to': assignedTo},

@@ -114,7 +114,7 @@ class TicketProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> assignTicket(int id, int assignedTo) async {
+  Future<bool> assignTicket(int id, List<int> assignedTo) async {
     try {
       final data = await ApiService.instance.assignTicket(id, assignedTo);
       final updated = TicketModel.fromJson(

@@ -83,24 +83,22 @@ class NotificationService
 
     public function sendTicketAssigned(Ticket $ticket): void
     {
-        $ticket->loadMissing(['technician:id,name,email,phone']);
+        $recipients = $this->assignedTechnicianRecipients($ticket);
 
-        $technician = $ticket->technician;
-
-        if (! $technician) {
+        if ($recipients->isEmpty()) {
             return;
         }
 
         $subject = 'Ticket Assigned: '.$ticket->ticket_no;
-        $message = "Hello {$technician->name},\n\n".
-            "You have been assigned ticket {$ticket->ticket_no}: {$ticket->title}.\n".
-            "Please review and begin work as soon as possible.";
+        $message = "You have been assigned ticket {$ticket->ticket_no}: {$ticket->title}.\nPlease review and begin work as soon as possible.";
 
-        $this->sendEmail($technician->email, $subject, $message);
-        $this->sendSms($technician->phone, "Assigned {$ticket->ticket_no}: {$ticket->title}");
+        foreach ($recipients as $technician) {
+            $this->sendEmail($technician->email, $subject, "Hello {$technician->name},\n\n{$message}");
+            $this->sendSms($technician->phone, "Assigned {$ticket->ticket_no}: {$ticket->title}");
+        }
 
         $this->firebasePushService->sendToUsers(
-            [$technician],
+            $recipients->all(),
             $subject,
             "Assigned {$ticket->ticket_no}: {$ticket->title}",
             [
@@ -114,7 +112,7 @@ class NotificationService
 
         $this->notifyOperationsManagers(
             $subject,
-            "Ticket {$ticket->ticket_no} has been assigned to {$technician->name}.\n\nTitle: {$ticket->title}",
+            "Ticket {$ticket->ticket_no} has been assigned to {$recipients->pluck('name')->join(', ')}.\n\nTitle: {$ticket->title}",
             "Ticket assigned: {$ticket->ticket_no}",
             [
                 'type' => 'ticket_assigned',
@@ -131,6 +129,7 @@ class NotificationService
         $ticket->loadMissing([
             'reporter:id,name,email,phone',
             'technician:id,name,email,phone',
+            'technicians:id,name,email,phone',
         ]);
 
         $newStatus = str($ticket->status)->replace('_', ' ')->title()->toString();
@@ -142,6 +141,7 @@ class NotificationService
 
         $recipients = collect([$ticket->reporter, $ticket->technician])
             ->filter()
+            ->merge($ticket->technicians)
             ->merge($this->operationsManagers());
 
         $this->notifyRecipients(
@@ -164,6 +164,7 @@ class NotificationService
         $ticket->loadMissing([
             'reporter:id,name,email,phone',
             'technician:id,name,email,phone',
+            'technicians:id,name,email,phone',
         ]);
 
         $statusLabel = $ticket->status === 'pending_approval' ? 'Pending Approval' : 'Logged/New';
@@ -174,6 +175,7 @@ class NotificationService
 
         $recipients = collect([$ticket->reporter, $ticket->technician])
             ->filter()
+            ->merge($ticket->technicians)
             ->merge($this->operationsManagers());
 
         $this->notifyRecipients(
@@ -196,6 +198,7 @@ class NotificationService
         $ticket->loadMissing([
             'reporter:id,name,email,phone',
             'technician:id,name,email,phone',
+            'technicians:id,name,email,phone',
         ]);
 
         $subject = 'Ticket Deleted: '.$ticket->ticket_no;
@@ -204,6 +207,7 @@ class NotificationService
 
         $recipients = collect([$ticket->reporter, $ticket->technician])
             ->filter()
+            ->merge($ticket->technicians)
             ->merge($this->operationsManagers());
 
         $this->notifyRecipients(
@@ -256,6 +260,17 @@ class NotificationService
             ],
             route('tickets.show', $ticket)
         );
+    }
+
+    private function assignedTechnicianRecipients(Ticket $ticket): Collection
+    {
+        $ticket->loadMissing(['technicians:id,name,email,phone', 'technician:id,name,email,phone']);
+
+        if ($ticket->technicians->isNotEmpty()) {
+            return $ticket->technicians;
+        }
+
+        return collect([$ticket->technician])->filter();
     }
 
     public function sendEmail(?string $to, string $subject, string $content): bool

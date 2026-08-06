@@ -1,7 +1,50 @@
 @php
     $editMode = $editMode ?? false;
     $technicianMode = $technicianMode ?? false;
+    $selectedTechnicianIds = collect(old('assigned_to', isset($ticket->technicians) ? $ticket->technicians->pluck('id')->all() : []))
+        ->filter()
+        ->map(fn ($id) => (string) $id)
+        ->all();
 @endphp
+
+@once
+    <style>
+        .assign-tech-list {
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid #d5dde6;
+            border-radius: 8px;
+            padding: 0.55rem 0.7rem;
+            background: #fff;
+        }
+
+        .assign-tech-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.45rem;
+            font-weight: 500;
+            line-height: 1.25;
+            cursor: pointer;
+        }
+
+        .assign-tech-option:last-child {
+            margin-bottom: 0;
+        }
+
+        .assign-tech-option input[type='checkbox'] {
+            width: 16px;
+            height: 16px;
+            margin: 0.08rem 0 0;
+            flex: 0 0 auto;
+        }
+
+        .assign-tech-option span {
+            display: inline-block;
+            padding-top: 0.01rem;
+        }
+    </style>
+@endonce
 
 <div class="form-grid">
     <div style="grid-column: 1 / -1;">
@@ -49,16 +92,27 @@
     @if($editMode)
         @if(! $technicianMode)
             <div>
-                <label for="assigned_to">Assigned Technician</label>
-                <select id="assigned_to" name="assigned_to">
-                    <option value="">Unassigned</option>
-                    @foreach($technicians as $technician)
-                        <option value="{{ $technician->id }}" @selected((string) old('assigned_to', $ticket->assigned_to ?? '') === (string) $technician->id)>{{ $technician->name }}</option>
-                    @endforeach
-                </select>
+                <label>Assigned Technicians</label>
+                <div class="assign-tech-list">
+                    @forelse($technicians as $technician)
+                        <label class="assign-tech-option">
+                            <input
+                                type="checkbox"
+                                name="assigned_to[]"
+                                value="{{ $technician->id }}"
+                                @checked(in_array((string) $technician->id, $selectedTechnicianIds, true))>
+                            <span>{{ $technician->name }}</span>
+                        </label>
+                    @empty
+                        <small class="muted">No technicians available.</small>
+                    @endforelse
+                </div>
+                <small class="muted">Select one or more technicians.</small>
             </div>
         @else
-            <input type="hidden" name="assigned_to" value="{{ $ticket->assigned_to }}">
+            @foreach(($ticket->technicians ?? collect()) as $technician)
+                <input type="hidden" name="assigned_to[]" value="{{ $technician->id }}">
+            @endforeach
         @endif
 
         <div>
@@ -84,13 +138,22 @@
             </div>
 
             <div>
-                <label for="assigned_to">Assign Technician (optional)</label>
-                <select id="assigned_to" name="assigned_to">
-                    <option value="">Unassigned</option>
-                    @foreach($technicians as $technician)
-                        <option value="{{ $technician->id }}" @selected((string) old('assigned_to') === (string) $technician->id)>{{ $technician->name }}</option>
-                    @endforeach
-                </select>
+                <label>Assign Technicians (optional)</label>
+                <div class="assign-tech-list">
+                    @forelse($technicians as $technician)
+                        <label class="assign-tech-option">
+                            <input
+                                type="checkbox"
+                                name="assigned_to[]"
+                                value="{{ $technician->id }}"
+                                @checked(in_array((string) $technician->id, $selectedTechnicianIds, true))>
+                            <span>{{ $technician->name }}</span>
+                        </label>
+                    @empty
+                        <small class="muted">No technicians available.</small>
+                    @endforelse
+                </div>
+                <small class="muted">Select one or more technicians.</small>
             </div>
         @endif
     @endif

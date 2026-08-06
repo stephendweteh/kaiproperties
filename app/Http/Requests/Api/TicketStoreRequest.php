@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Api;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class TicketStoreRequest extends FormRequest
 {
@@ -12,6 +14,21 @@ class TicketStoreRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $assignedTo = $this->input('assigned_to');
+
+        if ($assignedTo === null || $assignedTo === '') {
+            return;
+        }
+
+        $assignedTo = is_array($assignedTo) ? $assignedTo : [$assignedTo];
+
+        $this->merge([
+            'assigned_to' => array_values(array_filter($assignedTo, fn ($value) => $value !== null && $value !== '')),
+        ]);
     }
 
     /**
@@ -28,7 +45,12 @@ class TicketStoreRequest extends FormRequest
             'maintenance_category_id' => ['required', 'exists:maintenance_categories,id'],
             'unit' => ['nullable', 'string', 'max:100'],
             'reported_by' => ['nullable', 'exists:users,id'],
-            'assigned_to' => ['nullable', 'exists:users,id'],
+            'assigned_to' => ['nullable', 'array'],
+            'assigned_to.*' => [
+                'integer',
+                'distinct',
+                Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', User::ROLE_TECHNICIAN)),
+            ],
             'priority' => ['nullable', 'in:low,medium,high,urgent'],
             'etd' => ['nullable', 'date'],
             'estimated_cost' => ['nullable', 'numeric', 'min:0'],

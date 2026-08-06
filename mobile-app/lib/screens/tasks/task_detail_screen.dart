@@ -45,7 +45,7 @@ class TaskDetailScreen extends StatefulWidget {
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
   List<Map<String, dynamic>> _technicians = [];
   List<Map<String, dynamic>> _phases = [];
-  int? _selectedTechnicianId;
+  final List<int> _selectedTechnicianIds = [];
   bool _assigning = false;
   bool _loadingPhases = false;
   bool _savingPhase = false;
@@ -449,12 +449,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 'Created',
                 _formatCreatedAt(ticket.createdAt),
               ),
-              if (ticket.technician != null) ...[
+              if (ticket.assignedTechnicians.isNotEmpty) ...[
                 const Divider(color: AppColors.divider, height: 16),
                 _DetailRow(
                   Icons.engineering_outlined,
-                  'Technician',
-                  ticket.technician!.name,
+                  'Technicians',
+                  ticket.assignedTechnicians
+                      .map((technician) => technician.name)
+                      .join(', '),
                 ),
               ],
               if (ticket.etd != null) ...[
@@ -546,7 +548,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   ) {
     final canAssign = user.isOperationsManager || user.isAdmin;
     final isTech = user.isTechnician;
-    final isOwned = ticket.technician?.id == user.id;
+    final isOwned = ticket.assignedTechnicians.any((technician) => technician.id == user.id);
 
     final List<Widget> widgets = [];
     final List<(String, String, Color)> actions = [];
@@ -620,7 +622,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       return true;
     }
 
-    return user.isTechnician && ticket.technician?.id == user.id;
+    return user.isTechnician && ticket.assignedTechnicians.any((technician) => technician.id == user.id);
   }
 
   Widget _buildWorkProgressSection(
@@ -664,12 +666,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         ),
         const SizedBox(height: 8),
         _DetailRow(Icons.flag_outlined, 'Current Status', ticket.status),
-        if (ticket.technician != null) ...[
+        if (ticket.assignedTechnicians.isNotEmpty) ...[
           const Divider(color: AppColors.divider, height: 16),
           _DetailRow(
             Icons.engineering_outlined,
-            'Assigned Technician',
-            ticket.technician!.name,
+            'Assigned Technicians',
+            ticket.assignedTechnicians
+                .map((technician) => technician.name)
+                .join(', '),
           ),
         ],
         const SizedBox(height: 10),
@@ -1313,11 +1317,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     TicketModel ticket,
     TicketProvider prov,
   ) {
-    final currentTechId = ticket.technician?.id;
-    final value = _selectedTechnicianId ?? currentTechId;
-    final validValue = _technicians.any((t) => _asInt(t['id']) == value)
-      ? value
-      : null;
+    final currentTechIds = _selectedTechnicianIds.isNotEmpty
+        ? _selectedTechnicianIds
+        : ticket.assignedTechnicians.map((technician) => technician.id).toList();
+    final validTechIds = currentTechIds
+        .where((id) => _technicians.any((t) => _asInt(t['id']) == id))
+        .toList(growable: false);
 
     return Container(
       width: double.infinity,
@@ -1331,7 +1336,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Assign Technician',
+            'Assign Technicians',
             style: TextStyle(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w700,
@@ -1339,42 +1344,39 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          DropdownButtonFormField<int>(
-            initialValue: validValue,
-            items: _technicians
-                .map(
-                  (t) => DropdownMenuItem<int>(
-                    value: _asInt(t['id']),
-                    child: Text(t['name'] as String? ?? 'Unknown'),
-                  ),
-                )
-                .where((item) => item.value != null)
-                .toList(),
-            onChanged: _assigning
-                ? null
-                : (v) => setState(() => _selectedTechnicianId = v),
-            decoration: InputDecoration(
-              hintText: 'Select technician',
-              isDense: true,
-              filled: true,
-              fillColor: AppColors.background,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: AppColors.divider),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: AppColors.divider),
-              ),
-            ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _technicians.map((technician) {
+              final id = _asInt(technician['id']);
+              final name = technician['name'] as String? ?? 'Unknown';
+              if (id == null) return const SizedBox.shrink();
+
+              final selected = validTechIds.contains(id);
+              return FilterChip(
+                label: Text(name),
+                selected: selected,
+                onSelected: _assigning
+                    ? null
+                    : (_) {
+                        setState(() {
+                          if (selected) {
+                            _selectedTechnicianIds.remove(id);
+                          } else {
+                            _selectedTechnicianIds.add(id);
+                          }
+                        });
+                      },
+              );
+            }).toList(),
           ),
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _assigning || validValue == null
+              onPressed: _assigning || validTechIds.isEmpty
                   ? null
-                  : () => _doAssign(context, ticket.id, validValue, prov),
+                  : () => _doAssign(context, ticket.id, validTechIds, prov),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
@@ -1401,12 +1403,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Future<void> _doAssign(
     BuildContext context,
     int ticketId,
-    int technicianId,
+    List<int> technicianIds,
     TicketProvider prov,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _assigning = true);
-    final success = await prov.assignTicket(ticketId, technicianId);
+    final success = await prov.assignTicket(ticketId, technicianIds);
     if (!mounted) return;
     setState(() => _assigning = false);
 

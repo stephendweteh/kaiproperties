@@ -92,16 +92,33 @@ class DashboardController extends Controller
             return $item;
         });
 
-        $workload = Ticket::query()
-            ->select(
-                'users.name',
-                DB::raw('COUNT(tickets.id) as tickets_count'),
-                DB::raw("SUM(CASE WHEN tickets.status = 'completed' THEN 1 ELSE 0 END) as completed_tickets_count")
-            )
-            ->join('users', 'users.id', '=', 'tickets.assigned_to')
-            ->groupBy('users.id', 'users.name')
-            ->orderByDesc('tickets_count')
-            ->get();
+        if (Schema::hasTable('ticket_technician')) {
+            $workload = Ticket::query()
+                ->select(
+                    'users.name',
+                    DB::raw('COUNT(tickets.id) as tickets_count'),
+                    DB::raw("SUM(CASE WHEN tickets.status = 'completed' THEN 1 ELSE 0 END) as completed_tickets_count")
+                )
+                ->join('ticket_technician', 'ticket_technician.ticket_id', '=', 'tickets.id')
+                ->join('users', 'users.id', '=', 'ticket_technician.user_id')
+                ->groupBy('users.id', 'users.name')
+                ->orderByDesc('tickets_count')
+                ->get();
+        } elseif (Schema::hasColumn('tickets', 'assigned_to')) {
+            $workload = Ticket::query()
+                ->select(
+                    'users.name',
+                    DB::raw('COUNT(tickets.id) as tickets_count'),
+                    DB::raw("SUM(CASE WHEN tickets.status = 'completed' THEN 1 ELSE 0 END) as completed_tickets_count")
+                )
+                ->join('users', 'users.id', '=', 'tickets.assigned_to')
+                ->whereNotNull('tickets.assigned_to')
+                ->groupBy('users.id', 'users.name')
+                ->orderByDesc('tickets_count')
+                ->get();
+        } else {
+            $workload = collect();
+        }
 
         try {
             $customerStats = ($hasCustomersTable && $hasPropertiesCustomerId)
