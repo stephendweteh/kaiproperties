@@ -780,6 +780,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
         const SizedBox(height: 14),
         DropdownButtonFormField<int>(
           initialValue: _propertyId,
+          isExpanded: true,
           hint: const Text(
             'Select Property',
             style: TextStyle(
@@ -791,10 +792,26 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
               .map(
                 (p) => DropdownMenuItem<int>(
                   value: _asInt(p['id']),
-                  child: Text((p['name'] as String?) ?? 'Property'),
+                  child: Text(
+                    (p['name'] as String?) ?? 'Property',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               )
               .toList(),
+          selectedItemBuilder: (context) => _properties
+              .map(
+                (p) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    (p['name'] as String?) ?? 'Property',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(growable: false),
           onChanged: (v) => setState(() => _propertyId = v),
           decoration: _decor(
             'Property',
@@ -804,6 +821,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
         const SizedBox(height: _fieldSpacing),
         DropdownButtonFormField<int>(
           initialValue: _categoryId,
+          isExpanded: true,
           hint: const Text(
             'Select Category',
             style: TextStyle(
@@ -815,10 +833,26 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
               .map(
                 (c) => DropdownMenuItem<int>(
                   value: _asInt(c['id']),
-                  child: Text((c['name'] as String?) ?? 'Category'),
+                  child: Text(
+                    (c['name'] as String?) ?? 'Category',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               )
               .toList(),
+          selectedItemBuilder: (context) => _categories
+              .map(
+                (c) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    (c['name'] as String?) ?? 'Category',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(growable: false),
           onChanged: (v) => setState(() => _categoryId = v),
           decoration: _decor(
             'Category',
@@ -834,6 +868,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
         const SizedBox(height: _fieldSpacing),
         DropdownButtonFormField<String>(
           initialValue: _priority,
+          isExpanded: true,
           items: ['low', 'medium', 'high', 'urgent']
               .map(
                 (p) => DropdownMenuItem(
@@ -846,12 +881,16 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                         size: 16,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        p.toUpperCase(),
-                        style: TextStyle(
-                          color: AppColors.priorityColor(p),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                      Expanded(
+                        child: Text(
+                          p.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.priorityColor(p),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -859,6 +898,23 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                 ),
               )
               .toList(),
+          selectedItemBuilder: (context) => ['low', 'medium', 'high', 'urgent']
+              .map(
+                (p) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    p.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.priorityColor(p),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              )
+              .toList(growable: false),
           onChanged: (v) =>
               setState(() => _priority = v ?? 'medium'),
           decoration: _decor('Priority', Icons.flag_outlined),
@@ -918,6 +974,7 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
         const SizedBox(height: 14),
         DropdownButtonFormField<int>(
           initialValue: _reportedBy,
+          isExpanded: true,
           hint: const Text(
             'Select Reporter',
             style: TextStyle(
@@ -929,10 +986,26 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
               .map(
                 (r) => DropdownMenuItem<int>(
                   value: _asInt(r['id']),
-                  child: Text((r['name'] as String?) ?? 'User'),
+                  child: Text(
+                    (r['name'] as String?) ?? 'User',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               )
               .toList(),
+          selectedItemBuilder: (context) => _reporters
+              .map(
+                (r) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    (r['name'] as String?) ?? 'User',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(growable: false),
           onChanged: (v) => setState(() => _reportedBy = v),
           decoration: _decor('Reporter', Icons.person_outline),
         ),
@@ -956,7 +1029,14 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
             if (id == null) return const SizedBox.shrink();
             final selected = _assignedTechnicianIds.contains(id);
             return FilterChip(
-              label: Text(name),
+              label: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 160),
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               selected: selected,
               onSelected: (_) {
                 setState(() {
@@ -975,12 +1055,15 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
   }
 
   Widget _buildCostField() {
-    return Row(
-      children: [
-        SizedBox(
-          width: 100,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stacked = constraints.maxWidth < 360;
+
+        final currencyField = SizedBox(
+          width: stacked ? double.infinity : 100,
           child: DropdownButtonFormField<String>(
             initialValue: _estimatedCostCurrency,
+            isExpanded: true,
             items: _currencies
                 .map(
                   (currency) => DropdownMenuItem(
@@ -992,24 +1075,50 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
                   ),
                 )
                 .toList(),
+            selectedItemBuilder: (context) => _currencies
+                .map(
+                  (currency) => Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      currency,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                )
+                .toList(growable: false),
             onChanged: (value) => setState(
               () => _estimatedCostCurrency = value ?? 'GHS',
             ),
             decoration: _decor('', Icons.currency_exchange),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: TextFormField(
-            controller: _estimatedCostCtrl,
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-            ),
-            decoration:
-                _decor('Estimated Cost (Optional)', Icons.payments),
-          ),
-        ),
-      ],
+        );
+
+        final amountField = TextFormField(
+          controller: _estimatedCostCtrl,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: _decor('Estimated Cost (Optional)', Icons.payments),
+        );
+
+        if (stacked) {
+          return Column(
+            children: [
+              currencyField,
+              const SizedBox(height: 12),
+              amountField,
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            currencyField,
+            const SizedBox(width: 12),
+            Expanded(child: amountField),
+          ],
+        );
+      },
     );
   }
 
@@ -1259,11 +1368,15 @@ class _TaskCreateScreenState extends State<TaskCreateScreen> {
   }
 
   IconData _getFileIcon(String fileName) {
-    if (fileName.endsWith('.pdf')) return Icons.picture_as_pdf;
-    if (fileName.endsWith('.doc') || fileName.endsWith('.docx'))
+    if (fileName.endsWith('.pdf')) {
+      return Icons.picture_as_pdf;
+    }
+    if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
       return Icons.description;
-    if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx'))
+    }
+    if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
       return Icons.table_chart;
+    }
     return Icons.insert_drive_file;
   }
 

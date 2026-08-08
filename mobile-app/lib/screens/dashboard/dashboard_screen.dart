@@ -68,7 +68,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           Expanded(
-            child: prov.loading
+            child: prov.loading || prov.data == null
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
                 : prov.error != null
                     ? _buildError(prov)
@@ -375,7 +375,9 @@ class _RecentTicketTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text('${ticket.ticketNo} · ${ticket.property ?? 'N/A'}',
                         style: const TextStyle(
-                            color: AppColors.textSecondary, fontSize: 11)),
+                            color: AppColors.textSecondary, fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
@@ -389,6 +391,8 @@ class _RecentTicketTile extends StatelessWidget {
                   statusLabels[ticket.status] ?? _formatStatusLabel(ticket.status),
                   style: TextStyle(
                       color: color, fontSize: 9, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

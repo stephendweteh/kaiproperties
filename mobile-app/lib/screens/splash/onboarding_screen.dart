@@ -70,107 +70,130 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: const SizedBox.expand(),
             ),
           ),
-          Column(
-            children: [
-              const SizedBox(height: 60),
-              // Logo row
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxHeight < 700;
+                final pageHeight = compact ? 300.0 : 380.0;
+
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: compact ? 24 : 60,
+                        bottom: 24,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.asset(
-                          'assets/images/kai logo-app.png',
-                          fit: BoxFit.contain,
-                        ),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.asset(
+                                      'assets/images/kai logo-app.png',
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                const Flexible(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('KAI PROPERTIES',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              letterSpacing: 1)),
+                                      Text('GHANA LIMITED',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 10,
+                                              letterSpacing: 1.5)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            height: pageHeight,
+                            child: PageView.builder(
+                              controller: _controller,
+                              itemCount: _pages.length,
+                              onPageChanged: (i) => setState(() => _page = i),
+                              itemBuilder: (_, i) => _buildPage(_pages[i]),
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(
+                              _pages.length,
+                              (i) => AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                margin: const EdgeInsets.symmetric(horizontal: 4),
+                                width: _page == i ? 24 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: _page == i
+                                      ? AppColors.primary
+                                      : AppColors.divider,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: compact ? 20 : 32),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: ElevatedButton(
+                                onPressed: _next,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
+                                  elevation: 0,
+                                ),
+                                child: Text(
+                                  _page == _pages.length - 1 ? 'Get Started' : 'Next',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: () => context.go('/login'),
+                            child: const Text('Already have an account? Sign in',
+                                style: TextStyle(color: AppColors.textSecondary)),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('KAI PROPERTIES',
-                            style: TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                letterSpacing: 1)),
-                        Text('GHANA LIMITED',
-                            style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 10,
-                                letterSpacing: 1.5)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: PageView.builder(
-                  controller: _controller,
-                  itemCount: _pages.length,
-                  onPageChanged: (i) => setState(() => _page = i),
-                  itemBuilder: (_, i) => _buildPage(_pages[i]),
-                ),
-              ),
-              // Dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  _pages.length,
-                  (i) => AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: _page == i ? 24 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: _page == i ? AppColors.primary : AppColors.divider,
-                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _next,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      _page == _pages.length - 1 ? 'Get Started' : 'Next',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => context.go('/login'),
-                child: const Text('Already have an account? Sign in',
-                    style: TextStyle(color: AppColors.textSecondary)),
-              ),
-              const SizedBox(height: 24),
-            ],
+                );
+              },
+            ),
           ),
         ],
       ),

@@ -365,7 +365,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     TextButton.icon(
                       onPressed: () => context.go('/tasks/${ticket.id}/edit'),
                       icon: const Icon(Icons.edit_outlined, size: 16),
-                      label: const Text('Edit'),
+                      label: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 140),
+                        child: Text(
+                          'Edit',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.primary,
                         padding: const EdgeInsets.symmetric(
@@ -951,13 +958,23 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     return OutlinedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 16),
-      label: Text(label),
+      label: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 140),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
       style: OutlinedButton.styleFrom(
         side: BorderSide(
           color: onPressed == null ? AppColors.divider : AppColors.primary,
         ),
         foregroundColor:
             onPressed == null ? AppColors.textSecondary : AppColors.primary,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
@@ -1354,7 +1371,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
               final selected = validTechIds.contains(id);
               return FilterChip(
-                label: Text(name),
+                label: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 selected: selected,
                 onSelected: _assigning
                     ? null
@@ -1482,26 +1506,39 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.primary, size: 18),
-        const SizedBox(width: 10),
-        Text(
-          '$label: ',
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

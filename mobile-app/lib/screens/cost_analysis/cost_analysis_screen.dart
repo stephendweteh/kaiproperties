@@ -382,14 +382,22 @@ class _CostAnalysisScreenState extends State<CostAnalysisScreen> {
                           color: AppColors.textSecondary,
                           fontSize: 12,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Text(
-                      '${items[index].value.percentage.toStringAsFixed(1)}% • GHS ${_formatCurrency(items[index].value.amount)}',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        '${items[index].value.percentage.toStringAsFixed(1)}% • GHS ${_formatCurrency(items[index].value.amount)}',
+                        textAlign: TextAlign.right,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
